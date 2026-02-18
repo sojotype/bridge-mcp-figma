@@ -1,0 +1,13 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "target": "es2020",
+    "esModuleInterop": true,
+    "types": ["@figma/plugin-typings"],
+    "baseUrl": "../",
+    "paths": {},
+    "noEmit": true,
+    "strictNullChecks": true
+  },
+  "include": ["./**/*.ts"]
+}

@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "target": "es2020",
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "types": ["@types/react", "@types/react-dom"],
+    "baseUrl": "./",
+    "noEmit": true,
+    "strictNullChecks": true
+  },
+  "include": ["./**/*.ts", "./**/*.tsx"]
+}
