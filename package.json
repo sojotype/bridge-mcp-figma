@@ -1,7 +1,7 @@
 {
-  "name": "figma-mcp",
+  "name": "bridge-mcp-figma",
   "version": "0.0.1",
-  "description": "MCP bridge plugin for Figma: allows you to work with Figma through the MCP protocol.",
+  "description": "MCP server and plugin for Figma: allows you to work with Figma through the MCP protocol.",
   "main": "code.js",
   "author": "sojotype",
   "private": true,
