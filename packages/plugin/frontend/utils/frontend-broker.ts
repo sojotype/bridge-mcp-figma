@@ -1,8 +1,8 @@
-const dispatchAPI = (event: string, data: unknown) => {
+const sendBackend = (event: string, data: unknown) => {
   parent.postMessage({ pluginMessage: { event, data } }, "*");
 };
 
-const listenAPI = (event: string, callback: (data: unknown) => void) => {
+const listenBackend = (event: string, callback: (data: unknown) => void) => {
   window.onmessage = (message) => {
     if (message.data.pluginMessage?.event === event) {
       callback(message.data.pluginMessage.data);
@@ -10,4 +10,4 @@ const listenAPI = (event: string, callback: (data: unknown) => void) => {
   };
 };
 
-export { dispatchAPI, listenAPI };
+export const frontendBroker = { sendBackend, listenBackend };

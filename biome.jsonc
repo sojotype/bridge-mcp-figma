@@ -7,7 +7,7 @@
   ],
   "overrides": [
     {
-      "includes": ["packages/plugin/api/**"],
+      "includes": ["packages/plugin/backend/**"],
       "javascript": {
         "globals": ["figma", "__html__"]
       }
