@@ -1,6 +1,5 @@
 {
-  "name": "bridge-mcp-figma/mcp",
-  "version": "0.1.0",
+  "name": "bridge-mcp-figma/mcp-server",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,9 +7,11 @@
     "start": "next start"
   },
   "dependencies": {
+    "mcp-handler": "^1.0.7",
     "next": "16.1.6",
     "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "react-dom": "^19.2.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
