@@ -1,6 +1,5 @@
 {
   "name": "bridge-mcp-figma/plugin",
-  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,15 +11,15 @@
     "watch:manifest": "bun scripts/watch-manifest.ts"
   },
   "dependencies": {
-    "mcp-handler": "^1.0.7",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3"
+    "partysocket": "^1.1.14",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@figma/plugin-typings": "*",
     "@tailwindcss/vite": "^4.2.0",
-    "@vitejs/plugin-react": "^5.1.2",
-    "typescript": "^5.3.2",
+    "@vitejs/plugin-react": "^5.1.4",
+    "typescript": "^5.9.3",
     "vite": "npm:rolldown-vite@7.3.1",
     "vite-plugin-singlefile": "^2.3.0"
   }
