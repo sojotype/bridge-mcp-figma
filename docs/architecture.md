@@ -17,9 +17,10 @@ Figma Plugin API (figma.*)
 
 | Part | Role |
 |------|------|
-| **plugin** | Figma iframe + backend (main thread). Backend: WebSocket to PartyKit, `dispatch(tool, args)` to Figma API or declarative handlers. |
+| **api** | Shared package: Zod schemas for utilitarian tools, derived types; generated comment-free Figma Plugin API types for agent context (`plugin-api.agent.d.ts`). |
+| **plugin** | Figma iframe + backend (main thread). Backend: WebSocket to PartyKit, `dispatch(tool, args)` to Figma API or declarative handlers. Uses api for tool spec. |
 | **websocket** | PartyKit server. One room per session ID. Accepts plugin WebSocket connections; accepts HTTP POST from MCP server to send commands and wait for plugin response. |
-| **mcp-server** | Next.js app with MCP route (mcp-handler). Exposes tools; when a tool is invoked, calls PartyKit HTTP API with session ID so the request is delivered to the right plugin. |
+| **mcp-server** | Next.js app with MCP route (mcp-handler). Exposes tools; when a tool is invoked, calls PartyKit HTTP API with session ID. Uses api for tool schemas. |
 
 ## Data flow (one tool call)
 
@@ -30,10 +31,10 @@ Figma Plugin API (figma.*)
 5. Plugin sends `{ commandId, result }` or `{ commandId, error }` back over WebSocket.
 6. PartyKit resolves the pending request; MCP server returns the result to the agent.
 
-## Tool layers (planned)
+## Tool layers
 
-- **Utilitarian**: One tool ≈ one Figma Plugin API method. Spec and list of methods will live in a shared package (see [2025-02-22-utilitarian-tools-source-of-truth](decisions/2025-02-22-utilitarian-tools-source-of-truth.md)).
-- **Declarative**: Higher-level tools (e.g. “create frame tree with auto-layout”) implemented in the plugin; may call many API methods internally. Stay in plugin + MCP, not in the shared spec.
+- **Utilitarian**: One tool ≈ one Figma Plugin API method. Schemas and types live in the [api](packages/api.md) package (see [2025-02-22-utilitarian-tools-source-of-truth](decisions/2025-02-22-utilitarian-tools-source-of-truth.md)). MCP and plugin both depend on api.
+- **Declarative**: Higher-level tools (e.g. “create frame tree with auto-layout”) implemented in the plugin; may call many API methods internally. Stay in plugin + MCP; api exposes declarative entry points as needed.
 
 ## Security
 

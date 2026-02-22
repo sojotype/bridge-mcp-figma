@@ -6,7 +6,7 @@ Allow an AI agent (e.g. in Cursor) to edit Figma documents via MCP. The agent ca
 
 ## Principles
 
-- **Single source of truth** for tool definitions: shared spec (planned `api-spec` package) so MCP and plugin stay in sync.
+- **Single source of truth** for tool definitions: [api](packages/api.md) package (Zod schemas, types) so MCP and plugin stay in sync.
 - **Two tool layers**: utilitarian (thin wrappers over Figma Plugin API) and declarative (higher-level operations to reduce round-trips).
 - **Bridge is minimal**: PartyKit room per session; plugin connects by session ID; MCP server sends commands via HTTP to the room.
 

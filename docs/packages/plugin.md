@@ -25,4 +25,4 @@ Figma plugin that runs inside Figma and talks to the bridge via WebSocket.
 ## Links
 
 - Sends/receives JSON: `{ commandId, tool, args }` and `{ commandId, result | error }`. See [architecture](../architecture.md).
-- Tool list and dispatch are to be aligned with shared spec (see [decisions/2025-02-22-utilitarian-tools-source-of-truth](../decisions/2025-02-22-utilitarian-tools-source-of-truth.md)).
+- Tool list and dispatch are aligned with [api](api.md) package (see [decisions/2025-02-22-utilitarian-tools-source-of-truth](../decisions/2025-02-22-utilitarian-tools-source-of-truth.md)).
