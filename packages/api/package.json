@@ -1,0 +1,25 @@
+{
+  "name": "@bridge-mcp-figma/api",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "default": "./index.ts"
+    },
+    "./tools/utilitarian": {
+      "types": "./tools/utilitarian.ts",
+      "default": "./tools/utilitarian.ts"
+    },
+    "./tools/declarative": {
+      "types": "./tools/declarative.ts",
+      "default": "./tools/declarative.ts"
+    }
+  },
+  "dependencies": {
+    "zod": "^4.3.6"
+  }
+}
