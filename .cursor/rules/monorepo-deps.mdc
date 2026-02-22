@@ -1,0 +1,124 @@
+---
+description: Monorepo dependency management (Turborepo + Bun) — where to declare deps, workspace refs, Turbo tasks
+globs: ["**/package.json", "turbo.json"]
+alwaysApply: false
+---
+
+# Monorepo Dependency Management Rule
+
+## Stack: Turborepo + Bun
+
+**Principle:** Dependencies are declared where they are used. Declaration location matters; Bun's flat lockfile and hoisting do not change that.
+
+---
+
+## 1. Root `package.json` (shared tooling only)
+
+**SHOULD** be at root only if:
+
+- TypeScript and types (`typescript`, `@types/*`)
+- Linters/formatters (eslint, prettier, stylelint)
+- Test frameworks and shared test utils
+- Build orchestration (`turbo`)
+- Shared configs (tsconfig base, eslint config)
+- CLI/dev tools used by multiple packages and **not** affecting build output
+
+**MUST NOT** be at root:
+
+- Framework runtimes (react, next, express, hono)
+- Package-specific build plugins
+- Libraries used by only one package
+- Runtime deps of publishable packages
+
+---
+
+## 2. Package `package.json` (default)
+
+Declare a dependency in the **package that uses it** if:
+
+- The package imports it
+- It affects runtime or build output
+- The package may be published
+- Version may diverge
+- Removing it would break the package in isolation
+
+Applies even when Bun hoists to root `node_modules`.
+
+---
+
+## 3. Internal packages
+
+Use `workspace:*` for internal refs:
+
+```json
+"dependencies": {
+  "@repo/ui": "workspace:*",
+  "@repo/utils": "workspace:*"
+}
+```
+
+Shared framework deps in internal libraries: use **peerDependencies** (and devDependencies for local dev), not regular dependencies:
+
+```json
+"peerDependencies": { "react": ">=18" },
+"devDependencies": { "react": "^18" }
+```
+
+---
+
+## 4. Publishable packages
+
+- **ALL** runtime deps **MUST** be in that package's `package.json`
+- No runtime deps only at root
+- Declare `peerDependencies` where appropriate
+- Build-only deps in `devDependencies`
+- Package must work **outside** the monorepo
+
+---
+
+## 5. Versions
+
+- Prefer one shared version across the monorepo
+- Divergence needs justification (comment)
+- Use root `overrides` only as last resort for transitive conflicts; do not replace declaring deps in each consumer
+
+---
+
+## 6. `turbo.json` (when editing Turbo config)
+
+- Use `dependsOn: ["^build"]` for tasks that need upstream packages built
+- Consumer tasks that use another package's build output must list `"^build"` in `dependsOn`
+- Do not assume a dependency is built without the right `dependsOn`
+
+```json
+"build": { "dependsOn": ["^build"], "outputs": ["dist/**"] },
+"dev": { "dependsOn": ["^build"], "cache": false, "persistent": true }
+```
+
+---
+
+## 7. Adding a dependency (flow)
+
+1. Find the package that imports it
+2. Add it to **that package's** `package.json`
+3. Run `bun install` from **monorepo root** only
+4. Move to root only if: tooling **and** used by multiple packages **and** does not affect runtime output
+
+**Default: declare in package, not at root.** Never run `bun install` inside a package directory.
+
+---
+
+## 8. Forbidden
+
+- Do **not**: put runtime deps at root for convenience; rely on hoisting instead of declaration; assume a dep exists transitively; reuse another package's declared dep silently; use `*` or `latest`; use local path for internal packages (`"../packages/ui"`) — use `workspace:*`; add framework as regular dependency in a shared library — use peerDependencies.
+
+---
+
+## 9. Automation
+
+- Use **depcheck** (per-package undeclared/unused) and **sherif** or **syncpack** (version consistency) in CI
+- Add a Turbo task (e.g. `lint:deps`) that runs `depcheck` per package
+
+---
+
+**If unsure: declare in the consuming package, not at root.**
