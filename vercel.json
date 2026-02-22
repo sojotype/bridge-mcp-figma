@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "cd ../.. && bunx turbo run build --filter=bridge-mcp-figma/mcp-server",
+  "installCommand": "cd ../.. && bun install",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "rootDirectory": "packages/mcp-server"
+}
