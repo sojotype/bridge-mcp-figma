@@ -10,8 +10,50 @@ Figma plugin  ←  WebSocket  ←  same PartyKit room
 Figma Plugin API (figma.*)
 ```
 
-- **Session**: User opens the plugin → plugin generates or reuses a session ID and connects to PartyKit at `wss://…/party/{sessionId}`. User gives that ID to the agent (e.g. in Cursor).
+- **Session**: User opens the plugin → plugin generates or reuses a session ID and connects to PartyKit at `wss://…/party/{sessionId}`. Session ID is a transport identifier for routing commands, not a user identity.
 - **Tool call**: Agent calls an MCP tool → MCP server forwards the request to PartyKit (HTTP POST with `commandId`, `tool`, `args`, `secret`) → PartyKit pushes a command to the plugin over WebSocket → plugin runs `dispatch(tool, args)` and replies with result/error → PartyKit returns the result to MCP → agent gets the tool result.
+
+## Authentication and identity
+
+- **User login**:
+  - Users authenticate via a shared Next.js web app:
+    - **Email**: email/password login & registration (creates an email-anchored user account).
+    - **Figma OAuth**: redirect to Figma, then back to the Next.js app, which exchanges the code and then **always asks for an email** before finalizing the account:
+      - If the email is new → create a new user with that email and attach the Figma identity.
+      - If the email already exists → inform the user that this email is already linked to another account (showing it in a partially masked form) and offer:
+        - to link the new Figma account to that existing user, or
+        - to provide a different email if they want a separate account.
+  - The web app issues a **user token** (e.g. JWT from Appwrite or a custom access token) that is shared between:
+    - the MCP client (`mcp login` flow),
+    - the Figma plugin UI,
+    - the bridge backend (PartyKit + MCP server).
+- **Plugin flow**:
+  - Plugin UI shows two buttons: “Email” and “Figma OAuth”.
+  - Clicking a button opens the appropriate login/registration page in the Next.js app (email form or Figma OAuth entry).
+  - After successful login, the plugin receives the user token (e.g. via postMessage back from the browser window or a polling callback) and passes it to the plugin backend.
+- **MCP flow**:
+  - `mcp login` triggers the same Next.js auth (email or Figma OAuth) and stores the resulting user token locally (e.g. in a dotfile).
+  - MCP client sends the user token with every MCP request (Authorization header or tool-param).
+- **Bridge flow**:
+  - When the plugin connects to PartyKit with a given `sessionId`, it also sends the user token.
+  - PartyKit validates the token via the auth provider and stores a mapping `sessionId → userId`.
+  - MCP server, when invoking tools, still uses `sessionId` for routing, but the bridge can resolve it to `userId` and enforce per-user logic if needed.
+  - The bridge also maintains `userId → [sessionId...]` so it knows how many active plugin sessions a user has and can support “no/one/many sessions” behavior.
+
+## Session selection behavior
+
+- **0 sessions**:
+  - A tool invocation from MCP without `sessionId` fails with a clear error indicating that no active plugin sessions exist for the current user and that they must open the plugin in a Figma file.
+- **1 session**:
+  - MCP-server may omit `sessionId` in tool calls; it asks the bridge for active sessions for this user and routes the call to the single available `sessionId`.
+  - Plugin UI stays simple in this mode and does not expose the raw `sessionId` to the user (no copy button).
+- **>1 sessions**:
+  - MCP-server requires an explicit `sessionId` when more than one active session exists for a user.
+  - If `sessionId` is missing, MCP-server returns a structured error that includes a list of candidate sessions with:
+    - `sessionId`
+    - `documentName` / `fileKey` (where available)
+  - The assistant can then prompt the user with a human-readable list: e.g. “Choose one: (abc123 – Home page), (def456 – Design system)”.
+  - Plugin UI detects that the user has multiple active sessions and in each plugin instance shows the current `sessionId` and a copy control so the user can easily paste the identifier into MCP.
 
 ## Components
 

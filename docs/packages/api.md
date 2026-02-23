@@ -10,8 +10,7 @@ Shared package: tool schemas (Zod), derived types, and agent-only Figma Plugin A
 
 ## Exports
 
-- Main: `@bridge-mcp-figma/api` (re-exports tools).
-- Subpaths: `@bridge-mcp-figma/api/tools/utilitarian`, `@bridge-mcp-figma/api/tools/declarative`.
+Single entry: `@bridge-mcp-figma/api`. All exports (e.g. `DECLARATIVE_SCHEMAS`, `UTILITARIAN_SCHEMAS`, `ToolsParams`) come from this one path; no subpaths.
 
 ## Agent-only Figma types
 
