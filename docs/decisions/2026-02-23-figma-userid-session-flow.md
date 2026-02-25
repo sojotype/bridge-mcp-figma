@@ -1,26 +1,28 @@
-# ADR: Figma userId–based session flow (no separate auth)
+# ADR: Figma userHash-based session flow (no separate auth)
 
 **Status:** Accepted  
-**Date:** 2026-02-23
+**Date:** 2026-02-23  
+**Updated:** 2026-02-25 (userHash, persistent sessionId, one session per user per file)
 
 ## Context
 
 - An earlier design used email/Figma OAuth and a shared user token (Appwrite), which required Docker for local dev and added significant complexity.
-- We want minimal infrastructure: no auth server, no database for users. Identity is the Figma user.
+- We want minimal infrastructure: no auth server, no database for users. Identity is the Figma user, but we do not want to expose the raw Figma user id in the config or on the network.
 
 ## Decision
 
-- **No separate authentication.** The MCP server is added by URL; the URL includes a query parameter with one or more **Figma user IDs** (`figma.currentUser.id`). The user copies the config from the plugin and pastes it into the MCP client (e.g. Cursor).
-- **Plugin** connects to PartyKit and sends on connect: **current user id**, **file id** (fileKey), **file name**, and **user name** (`figma.currentUser.name`) so the agent can show human-readable labels. PartyKit stores `userId → [sessions]`; each session has `roomId`, `fileName`, `userName`, etc. If a user has more than one active session, PartyKit notifies the plugin; the plugin then shows the **room ID** (prefixed with `room-`) and a copy button. The user can paste this into the chat; the agent treats any message starting with `room-` as a session ID and uses it for subsequent tool calls.
-- **MCP** reads `userIds` from the request (URL query when the client is configured with that URL). When a tool is invoked **without** a session ID, MCP asks PartyKit for active sessions for those userIds:
+- **No separate authentication.** The MCP server is added by URL; the URL includes a query parameter **userHashes** (one or more hashes). The plugin computes **userHash** from `figma.currentUser.id` (e.g. SHA-256 of `userId + "figma-mcp-bridge-v1"`) and shows the MCP URL with `userHashes=<userHash>` in the UI. The user copies that URL into the MCP client (e.g. Cursor). The raw Figma user id is never sent or displayed.
+- **Plugin** persists **sessionId** per file in `figma.clientStorage` so that after a restart the same session is reused and MCP does not need to ask which session to use. On connect, the plugin sends **userHash**, **fileKey**, **fileName**, **userName** to the websocket room; the room registers with the **registry** party. Only **one active session per (userHash, fileKey)** is allowed. If the user opens the plugin in a second tab for the same file, the registry returns 409; the plugin shows "Active session in another tab" and retries registration every 30s until the other tab is closed.
+- **Registry** (PartyKit party, room `sessions`): Stores userHash+fileKey → session (roomId, metadata). Actions: **register** (from websocket room when plugin connects), **unregister** (from websocket room on close), **resolve** (sessions by userHashes), **invoke** (resolve one room and forward the command). Data is persisted in PartyKit Storage.
+- **MCP** reads **userHashes** from the request URL. When a tool is invoked **without** sessionId, MCP calls the registry with action **invoke**:
   - **0 sessions** → error: no active plugin sessions; user should open the plugin.
-  - **1 session** (across all given users) → use that session automatically; user does nothing.
-  - **Multiple sessions (one user)** → return a structured list of sessions with `roomId`, `fileName` (and `userName`); agent asks the user to choose; user can also paste a `room-...` id.
-  - **Multiple users with sessions** → return a list of users (with names) and their sessions (with file names); agent asks the user to choose user and then session (or paste `room-...`).
-- **Room ID** is exposed with a `room-` prefix so the agent can recognize it when the user pastes it in chat and use it as the session target.
+  - **1 session** → registry forwards the command to that room; user does nothing.
+  - **Multiple sessions** → registry returns 409 with a sessions list; MCP returns an error suggesting the user pass `sessionId`.
+- **sessionId** in tool params is **optional**; when omitted, the session is resolved by userHashes from the URL.
 
 ## Implications
 
-- No Docker or external auth service for local run. MCP URL is e.g. `http://localhost:3000/mcp?userIds=12345` (local) or `https://mcp.example.com/mcp?userIds=12345;67890` (remote); plugin shows both variants.
-- Plugin UI shows MCP config (URL + optional instructions) and, in multi-session mode, the current room ID with a copy button.
-- PartyKit is the single source of truth for "which users have which sessions"; MCP only has the list of userIds from the URL and resolves sessions via PartyKit.
+- MCP URL is e.g. `http://localhost:3000/mcp?userHashes=abc123def...` (local) or `https://mcp.example.com/mcp?userHashes=abc123;def456` (remote). Plugin UI shows both variants with the user's userHash.
+- Plugin UI shows MCP config (URL with userHashes), and the current session/room id with a copy button when useful.
+- PartyKit registry is the single source of truth for "which userHashes have which sessions"; MCP gets userHashes from the URL and resolves via the registry.
+- Optional (future): encrypt private data in registry or in request bodies; for the first iteration, userHash + HTTPS is sufficient.
