@@ -6,6 +6,6 @@
     "deploy": "partykit deploy"
   },
   "devDependencies": {
-    "partykit": "^0.0.110"
+    "partykit": "0.0.115"
   }
 }

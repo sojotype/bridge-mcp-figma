@@ -8,14 +8,14 @@
   },
   "dependencies": {
     "@bridge-mcp-figma/api": "workspace:*",
-    "mcp-handler": "^1.0.7",
+    "mcp-handler": "1.0.7",
     "next": "16.1.6",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "zod": "^4.3.6"
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "4.3.6"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "4.2.1",
     "babel-plugin-react-compiler": "1.0.0"
   },
   "ignoreScripts": [
