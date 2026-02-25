@@ -14,28 +14,28 @@
   ],
   "scripts": {
     "prepare": "lefthook install",
-    "dev": "turbo run dev",
-    "dev:plugin": "turbo run dev --filter=bridge-mcp-figma/plugin",
-    "dev:mcp": "turbo run dev --filter=bridge-mcp-figma/mcp-server",
+    "dev": "bun run --env-file=.env turbo run dev",
+    "dev:plugin": "bun run --env-file=.env turbo run dev --filter=bridge-mcp-figma/plugin",
+    "dev:mcp": "bun run --env-file=.env turbo run dev --filter=bridge-mcp-figma/mcp-server",
     "build": "turbo run build",
     "generate:plugin-api-agent": "bun run --cwd packages/api generate:plugin-api-agent"
   },
   "type": "module",
   "license": "MIT",
   "devDependencies": {
-    "@biomejs/biome": "2.3.11",
+    "@biomejs/biome": "2.4.4",
     "@types/bun": "latest",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "concurrently": "^8.2.2",
-    "fluid-tailwindcss": "^1.0.5",
-    "lefthook": "^2.0.15",
-    "lint-staged": "^16.2.7",
-    "tailwindcss": "^4",
-    "turbo": "^2.8.10",
-    "typescript": "^5.9.3",
-    "ultracite": "7.0.11"
+    "@types/node": "24.10.13",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "concurrently": "9.2.1",
+    "fluid-tailwindcss": "1.0.9",
+    "lefthook": "2.1.1",
+    "lint-staged": "16.2.7",
+    "tailwindcss": "4.2.1",
+    "turbo": "2.8.10",
+    "typescript": "5.9.3",
+    "ultracite": "7.2.3"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,jsonc,css,scss,md,mdx}": [
