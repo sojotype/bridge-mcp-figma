@@ -1,6 +1,16 @@
-// generate a random session id
-export const getSessionId = () => {
-  return (
-    figma.currentUser?.sessionId ?? Math.random().toString(36).substring(2, 15)
-  );
-};
+const STORAGE_PREFIX = "session_";
+
+/**
+ * Returns session id for the given file, persisting it in clientStorage.
+ * Same file gets the same session id across plugin restarts.
+ */
+export async function getSessionId(fileKey: string): Promise<string> {
+  const key = `${STORAGE_PREFIX}${fileKey}`;
+  const existing = await figma.clientStorage.getAsync(key);
+  if (existing && typeof existing === "string") {
+    return existing;
+  }
+  const sessionId = `room_${crypto.randomUUID()}`;
+  await figma.clientStorage.setAsync(key, sessionId);
+  return sessionId;
+}
