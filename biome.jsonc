@@ -6,6 +6,16 @@
     "ultracite/biome/remix",
     "ultracite/biome/next"
   ],
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "useSortedProperties": "off",
+        "useSortedKeys": "off",
+        "useSortedInterfaceMembers": "off"
+      }
+    }
+  },
   "overrides": [
     {
       "includes": ["packages/plugin/backend/**"],
