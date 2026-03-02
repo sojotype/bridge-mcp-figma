@@ -6,6 +6,8 @@
 
 @theme {
   /* Colors */
+  --color-*: initial;
+
   --color-gray-1: #fcfcfcff;
   --color-gray-2: #f9f9f9ff;
   --color-gray-3: #f0f0f0ff;
@@ -146,8 +148,6 @@
   --text-label: rem(10);
   --text-label--line-height: rem(20);
   --text-label--font-weight: 500;
-  /* Colors */
-  --color-*: initial;
 }
 
 @layer theme {
