@@ -1,24 +1,34 @@
 import type * as Party from "partykit/server";
+import { REGISTRY_ROOM_ID } from "./registry";
 
 // Protocol types
 interface Command {
+  args: unknown;
   commandId: string;
   tool: string;
-  args: unknown;
 }
 
 interface CommandResult {
   commandId: string;
-  result?: unknown;
   error?: string;
+  result?: unknown;
+}
+
+// Plugin registration message (first message after connect)
+interface RegisterMessage {
+  fileKey: string;
+  fileName?: string;
+  type: "register";
+  userHash: string;
+  userName?: string;
 }
 
 // Messages from the MCP server (via HTTP request to PartyKit)
 interface McpRequest {
-  commandId: string;
-  tool: string;
   args: unknown;
+  commandId: string;
   secret: string; // simple protection
+  tool: string;
 }
 
 export default class FigmaBridge implements Party.Server {
@@ -45,29 +55,136 @@ export default class FigmaBridge implements Party.Server {
 
   onClose() {
     console.error(`Plugin disconnected from room: ${this.room.id}`);
+    this.unregisterFromRegistry();
   }
 
-  // Plugin sent the result of the command execution
-  onMessage(message: string) {
-    const data: CommandResult = JSON.parse(message);
-    const pending = this.pending.get(data.commandId);
+  private async unregisterFromRegistry(): Promise<void> {
+    try {
+      const parties = this.room.context?.parties as
+        | {
+            registry?: {
+              get: (id: string) => {
+                fetch: (req: Request) => Promise<Response>;
+              };
+            };
+          }
+        | undefined;
+      if (!parties?.registry) {
+        return;
+      }
+      const secret = this.room.env.BRIDGE_SECRET as string;
+      const registryRoom = parties.registry.get(REGISTRY_ROOM_ID);
+      await registryRoom.fetch(
+        new Request("https://_/parties/registry/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "unregister",
+            roomId: this.room.id,
+            secret,
+          }),
+        })
+      );
+    } catch (e) {
+      console.error("Registry unregister failed:", e);
+    }
+  }
+
+  // Plugin sent the result of the command execution, or register message
+  async onMessage(message: string, sender: Party.Connection) {
+    let data: unknown;
+    try {
+      data = JSON.parse(message);
+    } catch {
+      return;
+    }
+    const msg = data as { type?: string; [k: string]: unknown };
+    if (msg.type === "register") {
+      await this.handleRegister(msg as unknown as RegisterMessage, sender);
+      return;
+    }
+    const commandResult = data as CommandResult;
+    const pending = this.pending.get(commandResult.commandId);
 
     if (!pending) {
       return;
     }
 
     clearTimeout(pending.timer);
-    this.pending.delete(data.commandId);
+    this.pending.delete(commandResult.commandId);
 
-    if (data.error) {
-      pending.reject(data.error);
+    if (commandResult.error) {
+      pending.reject(commandResult.error);
     } else {
-      pending.resolve(data.result);
+      pending.resolve(commandResult.result);
     }
   }
 
-  // MCP server sends a command via HTTP POST
+  private async handleRegister(
+    body: RegisterMessage,
+    sender: Party.Connection
+  ): Promise<void> {
+    const parties = this.room.context?.parties as
+      | {
+          registry?: {
+            get: (id: string) => {
+              fetch: (req: Request) => Promise<Response>;
+            };
+          };
+        }
+      | undefined;
+    if (!parties?.registry) {
+      sender.send(
+        JSON.stringify({ type: "error", error: "Registry unavailable" })
+      );
+      return;
+    }
+    const secret = this.room.env.BRIDGE_SECRET as string;
+    const registryRoom = parties.registry.get(REGISTRY_ROOM_ID);
+    const res = await registryRoom.fetch(
+      new Request("https://_/parties/registry/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "register",
+          userHash: body.userHash,
+          fileKey: body.fileKey,
+          roomId: this.room.id,
+          fileName: body.fileName,
+          userName: body.userName,
+          secret,
+        }),
+      })
+    );
+    if (res.status === 409) {
+      sender.send(JSON.stringify({ type: "alreadyActive" }));
+      return;
+    }
+    if (!res.ok) {
+      const err = (await res.json()) as { error?: string };
+      sender.send(
+        JSON.stringify({
+          type: "error",
+          error: err.error ?? String(res.status),
+        })
+      );
+      return;
+    }
+    sender.send(JSON.stringify({ type: "registered" }));
+  }
+
+  // MCP server sends a command via HTTP POST; GET returns connection count for registry
   async onRequest(req: Party.Request): Promise<Response> {
+    if (req.method === "GET") {
+      const auth = req.headers.get("Authorization");
+      const token = auth?.startsWith("Bearer ") ? auth.slice(7) : "";
+      if (token !== this.room.env.BRIDGE_SECRET) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      const connections = [...this.room.getConnections()].length;
+      return Response.json({ connections });
+    }
+
     if (req.method !== "POST") {
       return new Response("Method not allowed", { status: 405 });
     }

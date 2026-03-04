@@ -2,5 +2,9 @@
   "$schema": "https://www.partykit.io/schema.json",
   "name": "websocket",
   "main": "src/server.ts",
+  "parties": {
+    "registry": "src/registry.ts",
+    "websocket": "src/server.ts"
+  },
   "compatibilityDate": "2026-02-21"
 }
