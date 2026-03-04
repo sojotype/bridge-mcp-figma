@@ -10,6 +10,7 @@ Figma plugin that runs inside Figma and talks to the bridge via WebSocket.
   - Shows **MCP config** for adding the server to the client (e.g. Cursor): two variants — **local** (e.g. `http://localhost:3000/mcp?userIds=<figma.currentUser.id>`) and **remote** (same URL with production host). User copies the config and pastes it into the MCP client.
   - In **single-session mode** (only one active plugin session for this Figma user), the UI does **not** show any room/session identifier.
   - In **multi-session mode** (PartyKit notifies that this user has more than one active session), the UI shows the current **room ID** (with `room-` prefix) and a copy button so the user can paste it into the chat; the agent recognizes `room-...` as the session target.
+  - **Design tokens** (colors, typography): canonical list in [frontend/TOKENS.md](../../packages/plugin/frontend/TOKENS.md); variables live in `frontend/globals.css`.
 - **Room ID**: Generated for each plugin instance (e.g. `room-` + random id). Used as the PartyKit room name. Figma user identity is sent separately in the connect payload so PartyKit can maintain `userId → [sessions]`.
 
 ## Entry points

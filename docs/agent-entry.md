@@ -13,6 +13,7 @@ Read this first. Use it to choose which docs to open.
 | [packages/](packages/) | One file per package: [api](packages/api.md), [plugin](packages/plugin.md), [mcp-server](packages/mcp-server.md), [websocket](packages/websocket.md). |
 | [decisions/](decisions/) | ADRs: significant architectural choices. |
 | [glossary.md](glossary.md) | Terms: MCP, bridge, session, utilitarian vs declarative tools. |
+| **Plugin UI design tokens** | [packages/plugin/frontend/TOKENS.md](../packages/plugin/frontend/TOKENS.md) — CSS variables (colors, typography). Use when choosing design system variables for plugin UI. |
 
 ---
 
@@ -24,4 +25,5 @@ Read this first. Use it to choose which docs to open.
 - **Figma Plugin API types for agents / generating plugin-api.agent.d.ts** → packages/api.md.
 - **Bridge or WebSocket protocol** → packages/websocket.md, architecture.md.
 - **Figma plugin behaviour** → packages/plugin.md.
+- **Plugin UI styling / which CSS variables to use** → [packages/plugin/frontend/TOKENS.md](../packages/plugin/frontend/TOKENS.md).
 - **Session/identity flow (Figma userId, room, multi-session)** → architecture.md, [2026-02-23-figma-userid-session-flow](decisions/2026-02-23-figma-userid-session-flow.md).
