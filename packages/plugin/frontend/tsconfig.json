@@ -6,7 +6,6 @@
     "esModuleInterop": true,
     "moduleResolution": "bundler",
     "types": ["@types/react", "@types/react-dom"],
-    "baseUrl": "./",
     "noEmit": true,
     "strictNullChecks": true
   },
