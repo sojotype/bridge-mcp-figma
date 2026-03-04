@@ -16,6 +16,13 @@
       }
     }
   },
+  "linter": {
+    "rules": {
+      "nursery": {
+        "useSortedClasses": "off"
+      }
+    }
+  },
   "overrides": [
     {
       "includes": ["packages/plugin/backend/**"],
