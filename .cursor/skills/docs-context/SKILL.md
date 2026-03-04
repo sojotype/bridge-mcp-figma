@@ -1,6 +1,7 @@
 ---
 name: docs-context
 description: Keeps project documentation in docs/ up to date so the agent has current architectural context without reading all code. Use when starting a task (to load context), when changing architecture or modules, or when the user asks to update or create project docs.
+disable-model-invocation: false
 ---
 
 # Project Documentation Context
