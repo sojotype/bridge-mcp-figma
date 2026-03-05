@@ -53,5 +53,8 @@
   "files.associations": {
     "*.css": "tailwindcss"
   },
-  "tailwindCSS.classFunctions": ["tv"]
+  "tailwindCSS.classFunctions": ["tv"],
+  "tailwindCSS.experimental.classRegex": [
+    "(?:const|let|var)\\s+\\w*(?:Styles|ClassName|CLASS)\\w*\\s*=\\s*[\"'`]([^\"'`]*)[\"'`]"
+  ]
 }
