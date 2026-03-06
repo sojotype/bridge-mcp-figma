@@ -139,6 +139,7 @@
   --text-body: rem(13);
   --text-body--line-height: rem(20);
   --text-body--font-weight: 400;
+  --text-body--letter-spacing: 0.01em;
 
   --text-caption: rem(12);
   --text-caption--line-height: rem(20);

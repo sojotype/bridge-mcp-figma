@@ -265,10 +265,7 @@ const EnterKey = (props: SVGProps<SVGSVGElement>) => (
     xmlns="http://www.w3.org/2000/svg"
     {...props}
   >
-    <path
-      d="M12.938 7.313v2.25a.563.563 0 0 1-.563.562H6.983l.727.727a.563.563 0 0 1-.795.796L5.227 9.96a.56.56 0 0 1 0-.795l1.688-1.688a.563.563 0 0 1 .795.796L6.983 9h4.83V7.313a.563.563 0 0 1 1.124 0m3.374-3.375v10.125a1.125 1.125 0 0 1-1.125 1.124H2.813a1.125 1.125 0 0 1-1.126-1.124V3.938a1.125 1.125 0 0 1 1.126-1.126h12.375a1.125 1.125 0 0 1 1.124 1.126m-1.125 10.125V3.938H2.813v10.125z"
-      fill="currentColor"
-    />
+    <path d="M14 10H6v3L1 9l5-4v3h6V4h2v6Z" fill="currentColor" />
   </svg>
 );
 
@@ -284,6 +281,23 @@ const Mail = (props: SVGProps<SVGSVGElement>) => (
   >
     <path
       d="M14 3H2a.5.5 0 0 0-.5.5V12a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V3.5A.5.5 0 0 0 14 3m-1.286 1L8 8.322 3.286 4zm.786 8h-11V4.637l5.162 4.732a.5.5 0 0 0 .676 0L13.5 4.637z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+const Checkmark = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    aria-label={props["aria-label"] ?? "Checkmark"}
+    fill="currentColor"
+    height={18}
+    viewBox="0 0 18 18"
+    width={18}
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path
+      d="M13.136 3.496a1.001 1.001 0 0 1 1.728 1.008l-4.999 8.57c-1.241 2.128-4.378 1.934-5.348-.33L3.08 9.393a1 1 0 1 1 1.838-.788l1.436 3.35a1 1 0 0 0 1.783.11l4.998-8.57Z"
       fill="currentColor"
     />
   </svg>
@@ -306,4 +320,5 @@ const iconMap = {
   document: Document,
   enterKey: EnterKey,
   mail: Mail,
+  checkmark: Checkmark,
 } as const;

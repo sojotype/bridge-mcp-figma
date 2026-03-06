@@ -13,36 +13,35 @@ export type IndicatorVariant = (typeof indicatorVariants)[number];
 
 interface IndicatorProps {
   variant?: IndicatorVariant;
-  className?: string;
 }
 
 const root = tv({
-  base: "relative size-[7px] shrink-0 rounded-[999px]",
+  base: "relative size-[16px] shrink-0 rounded-[999px]",
 });
 
 const glow = tv({
   base: [
-    "absolute top-[calc(50%-0.5px)] left-1/2 size-[87px] -translate-x-1/2 -translate-y-1/2 rounded-[999px]",
+    "absolute top-1/2 left-1/2 size-[88px] -translate-x-1/2 -translate-y-1/2 rounded-[999px] opacity-15",
     "transition-[background-color, opacity] duration-300 ease-out",
   ],
   variants: {
     variant: {
       online:
-        "bg-[radial-gradient(circle_at_50%_50%,var(--color-jade-9)_0%,transparent_70%)] opacity-15",
+        "bg-[radial-gradient(circle_at_50%_50%,var(--color-jade-9)_0%,transparent_70%)]",
       offline:
-        "bg-[radial-gradient(circle_at_50%_50%,var(--color-ruby-9)_0%,transparent_70%)] opacity-10",
+        "bg-[radial-gradient(circle_at_50%_50%,var(--color-ruby-9)_0%,transparent_70%)]",
       warning:
-        "bg-[radial-gradient(circle_at_50%_50%,var(--color-orange-9)_0%,transparent_70%)] opacity-10",
+        "bg-[radial-gradient(circle_at_50%_50%,var(--color-orange-9)_0%,transparent_70%)]",
       idle: "bg-[radial-gradient(circle_at_50%_50%,var(--color-blue-9)_0%,transparent_70%)] opacity-0 ease-in",
       connecting:
-        "bg-[radial-gradient(circle_at_50%_50%,var(--color-blue-9)_0%,transparent_70%)] opacity-15",
+        "bg-[radial-gradient(circle_at_50%_50%,var(--color-blue-9)_0%,transparent_70%)]",
     },
   },
 });
 
 const dot = tv({
   base: [
-    "absolute inset-0 translate-x-px -translate-y-px rounded-[999px]",
+    "absolute top-1/2 left-1/2 size-[8px] -translate-x-1/2 -translate-y-1/2 rounded-[999px] blur-[1px]",
     "transition-[background-color] duration-300 ease-out",
   ],
   variants: {
@@ -56,7 +55,7 @@ const dot = tv({
   },
 });
 
-const DOT_SIZE = 7;
+const DOT_SIZE = 8;
 const LOADER_STROKE = 2;
 const LOADER_GAP = 2;
 const LOADER_SIZE = DOT_SIZE + LOADER_STROKE * 2 + LOADER_GAP * 2;
@@ -66,8 +65,8 @@ const CX = GEOMETRY_SIZE / 2;
 const CY = GEOMETRY_SIZE / 2;
 const R = (DOT_SIZE / 2 + LOADER_GAP + LOADER_STROKE / 2) * GEOMETRY_SCALE;
 const GEOMETRY_STROKE = LOADER_STROKE * GEOMETRY_SCALE;
-const LOADER_NUDGE_X = 0.5;
-const LOADER_NUDGE_Y = -0.5;
+const LOADER_NUDGE_X = 0;
+const LOADER_NUDGE_Y = 0;
 const SPIN_SPEED_DEG_PER_SEC = 1080;
 const APPEAR_DURATION_SEC = 0.33;
 const DISAPPEAR_DURATION_SEC = 0.33;
@@ -82,7 +81,7 @@ function angleToXY(deg: number) {
 
 type LoaderPhase = "idle" | "appear" | "spin" | "disappear";
 
-export function Indicator({ variant = "online", className }: IndicatorProps) {
+export function Indicator({ variant = "online" }: IndicatorProps) {
   const loaderMaskId = useId().replace(/:/g, "");
   const isConnecting = variant === "connecting";
   const [phase, setPhase] = useState<LoaderPhase>("idle");
@@ -268,14 +267,14 @@ export function Indicator({ variant = "online", className }: IndicatorProps) {
   const showLoader = phase !== "idle";
 
   return (
-    <div aria-label={variant} className={root({ className })} role="img">
+    <div aria-label={variant} className={root({})} role="img">
       <div aria-hidden className={glow({ variant })} />
       <div aria-hidden className={dot({ variant })} />
 
       {showLoader && (
         <svg
           aria-label="Connecting"
-          className="absolute size-[15px] overflow-visible"
+          className="absolute size-[16px] overflow-visible"
           role="img"
           shapeRendering="geometricPrecision"
           style={{
