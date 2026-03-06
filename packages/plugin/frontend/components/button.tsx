@@ -21,7 +21,7 @@ const button = tv({
     "inline-flex h-7 items-center justify-center gap-1.5 px-3",
     "rounded-[4px] text-body font-medium",
     "transition-[background-color] duration-300 ease-out",
-    "hover:transition-none will-change-[background-color]",
+    "will-change-[background-color] hover:transition-none",
     "focus-visible:ring-1 focus-visible:ring-blue-8 focus-visible:outline-none",
   ].join(" "),
   variants: {
@@ -63,26 +63,22 @@ const button = tv({
     {
       variant: "alpha",
       tone: "neutral",
-      class:
-        "border border-transparent bg-grayA-4 text-gray-12 hover:bg-grayA-5 active:bg-grayA-3",
+      class: "bg-grayA-4 text-gray-12 hover:bg-grayA-5 active:bg-grayA-3",
     },
     {
       variant: "alpha",
       tone: "info",
-      class:
-        "border border-transparent bg-blueA-4 text-blue-12 hover:bg-blueA-5 active:bg-blueA-3",
+      class: "bg-blueA-4 text-blue-12 hover:bg-blueA-5 active:bg-blueA-3",
     },
     {
       variant: "alpha",
       tone: "success",
-      class:
-        "border border-transparent bg-jadeA-4 text-jade-12 hover:bg-jadeA-5 active:bg-jadeA-3",
+      class: "bg-jadeA-4 text-jade-12 hover:bg-jadeA-5 active:bg-jadeA-3",
     },
     {
       variant: "alpha",
       tone: "error",
-      class:
-        "border border-transparent bg-rubyA-4 text-ruby-12 hover:bg-rubyA-5 active:bg-rubyA-3",
+      class: "bg-rubyA-4 text-ruby-12 hover:bg-rubyA-5 active:bg-rubyA-3",
     },
   ],
   defaultVariants: {

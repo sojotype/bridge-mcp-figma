@@ -2,16 +2,16 @@ import { tv } from "../utils/tv";
 import { Icon, type IconName } from "./icon";
 import { Tooltip } from "./tooltip";
 
-const button = tv({
+const tab = tv({
   base: [
-    "flex size-7 items-center justify-center gap-x-1.5 rounded border border-grayA-3 bg-gray-4 px-2 py-1 text-body text-gray-12",
+    "flex size-7 items-center justify-center gap-x-1.5 rounded bg-gray-4 px-2 py-1 text-body text-gray-12 shadow-[inset_0_0_0_1px_var(--color-grayA-3)]",
     "transition-[background-color] duration-300 ease-out",
     "hover:bg-gray-6 hover:transition-none",
     "will-change-[background-color]",
   ].join(" "),
   variants: {
     active: {
-      true: "border-blue-8 bg-blueA-2 hover:bg-blueA-2",
+      true: "bg-blueA-2 shadow-[inset_0_0_0_1px_var(--color-blue-8)] hover:bg-blueA-2",
     },
   },
 });
@@ -30,10 +30,10 @@ export const Tab = ({
   onClick,
 }: TabProps) => {
   return (
-    <Tooltip content={tooltip}>
-      <button className={button({ active })} onClick={onClick} type="button">
+    <Tooltip content={tooltip} onClick={onClick}>
+      <div className={tab({ active })}>
         <Icon className="size-4 shrink-0" name={iconName} />
-      </button>
+      </div>
     </Tooltip>
   );
 };

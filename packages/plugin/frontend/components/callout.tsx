@@ -40,7 +40,7 @@ const header = tv({
 });
 
 const titleText = tv({
-  base: "truncate text-body font-light",
+  base: "truncate text-body",
 });
 
 const body = tv({
@@ -48,7 +48,7 @@ const body = tv({
 });
 
 const bodyText = tv({
-  base: "w-full text-body font-light",
+  base: "w-full text-body",
 });
 
 export const Callout = ({

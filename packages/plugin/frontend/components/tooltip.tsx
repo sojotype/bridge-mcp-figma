@@ -1,9 +1,10 @@
 import { Tooltip as T } from "@base-ui/react/tooltip";
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 
 interface TooltipProps {
   content: ReactNode;
-  children: ReactNode;
+  children: ReactElement;
+  onClick?: () => void;
 }
 
 const positionerStyles = "z-40 data-closed:z-40 data-open:z-50";
@@ -16,10 +17,10 @@ const popupStyles = [
   "data-ending-style:opacity-0 data-ending-style:blur-xs",
 ].join(" ");
 
-export const Tooltip = ({ content, children }: TooltipProps) => {
+export const Tooltip = ({ content, children, onClick }: TooltipProps) => {
   return (
     <T.Root>
-      <T.Trigger>{children}</T.Trigger>
+      <T.Trigger onClick={onClick} render={children} />
       <T.Portal>
         <T.Positioner
           className={positionerStyles}
