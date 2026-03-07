@@ -1,7 +1,7 @@
 import { Checkbox as C } from "@base-ui/react/checkbox";
 import type { ComponentPropsWithoutRef } from "react";
 import { useId } from "react";
-import { tv } from "../utils/tv";
+import { tv } from "../../utils/tv";
 import { Icon } from "./icon";
 
 const root = tv({
@@ -29,7 +29,9 @@ const indicator = tv({
 });
 
 const label = tv({
-  base: ["group w-fill inline-flex items-start gap-2 text-body text-gray-11"],
+  base: [
+    "group w-fill inline-flex items-start gap-2 py-1 text-body text-gray-11",
+  ],
 });
 
 export interface CheckboxProps

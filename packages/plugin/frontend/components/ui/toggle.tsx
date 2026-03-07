@@ -1,5 +1,5 @@
 import { Toggle as T } from "@base-ui/react/toggle";
-import { tv } from "../utils/tv";
+import { tv } from "../../utils/tv";
 import { Indicator } from "./indicator";
 import { Tooltip } from "./tooltip";
 

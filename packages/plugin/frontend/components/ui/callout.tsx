@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { tv } from "../utils/tv";
+import { tv } from "../../utils/tv";
 import { Button } from "./button";
 import { Icon } from "./icon";
 
