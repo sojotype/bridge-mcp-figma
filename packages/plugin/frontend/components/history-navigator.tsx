@@ -8,6 +8,8 @@ export function HistoryNavigator() {
     const handleMouseUp = (event: MouseEvent) => {
       if (event.button === 3) {
         navigate(-1);
+      } else if (event.button === 4) {
+        navigate(1);
       }
     };
 
