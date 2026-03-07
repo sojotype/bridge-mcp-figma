@@ -27,7 +27,26 @@
     {
       "includes": ["packages/plugin/backend/**"],
       "javascript": {
-        "globals": ["figma", "__html__"]
+        "globals": [
+          "figma",
+          "__html__",
+          "__MCP_LOCAL_URL__",
+          "__MCP_REMOTE_URL__",
+          "__WEBSOCKET_LOCAL_URL__",
+          "__WEBSOCKET_REMOTE_URL__",
+          "__USER_HASH_SALT__"
+        ]
+      }
+    },
+    {
+      "includes": ["packages/plugin/frontend/**"],
+      "javascript": {
+        "globals": [
+          "__MCP_LOCAL_URL__",
+          "__MCP_REMOTE_URL__",
+          "__WEBSOCKET_LOCAL_URL__",
+          "__WEBSOCKET_REMOTE_URL__"
+        ]
       }
     }
   ]
