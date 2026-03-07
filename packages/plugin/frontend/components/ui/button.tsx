@@ -4,7 +4,7 @@ import { Icon, type IconName } from "./icon";
 
 type ButtonVariant = "solid" | "alpha";
 
-type ButtonTone = "neutral" | "info" | "success" | "error";
+type ButtonTone = "neutral" | "primary" | "success" | "error";
 
 export interface ButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
@@ -21,8 +21,8 @@ const button = tv({
     "inline-flex h-7 items-center justify-center gap-1.5 px-3",
     "rounded-[4px] text-body font-medium",
     "transition-[background-color] duration-300 ease-out",
-    "will-change-[background-color] hover:transition-none",
-    "focus-visible:ring-1 focus-visible:ring-blue-8 focus-visible:outline-none",
+    "hover:transition-none",
+    "focus-visible:ring-1 focus-visible:ring-primary-8 focus-visible:outline-none",
   ].join(" "),
   variants: {
     variant: {
@@ -31,7 +31,7 @@ const button = tv({
     },
     tone: {
       neutral: "",
-      info: "",
+      primary: "",
       success: "",
       error: "",
     },
@@ -41,44 +41,51 @@ const button = tv({
     {
       variant: "solid",
       tone: "neutral",
-      class: "bg-gray-6 text-gray-12 hover:bg-gray-7 active:bg-gray-5",
+      class:
+        "bg-neutral-6 text-neutral-12 hover:bg-neutral-7 active:bg-neutral-5",
     },
     {
       variant: "solid",
-      tone: "info",
-      class: "bg-blue-7 text-gray-12 hover:bg-blue-8 active:bg-blue-6",
+      tone: "primary",
+      class:
+        "bg-primary-7 text-neutral-12 hover:bg-primary-8 active:bg-primary-6",
     },
     {
       variant: "solid",
       tone: "success",
-      class: "bg-jade-7 text-gray-12 hover:bg-jade-8 active:bg-jade-6",
+      class:
+        "bg-success-7 text-neutral-12 hover:bg-success-8 active:bg-success-6",
     },
     {
       variant: "solid",
       tone: "error",
-      class: "bg-ruby-7 text-gray-12 hover:bg-ruby-8 active:bg-ruby-6",
+      class: "bg-error-7 text-neutral-12 hover:bg-error-8 active:bg-error-6",
     },
 
     // Alpha buttons (tinted backgrounds)
     {
       variant: "alpha",
       tone: "neutral",
-      class: "bg-grayA-4 text-gray-12 hover:bg-grayA-5 active:bg-grayA-3",
+      class:
+        "bg-neutral-a-4 text-neutral-12 hover:bg-neutral-a-5 active:bg-neutral-a-3",
     },
     {
       variant: "alpha",
-      tone: "info",
-      class: "bg-blueA-4 text-blue-12 hover:bg-blueA-5 active:bg-blueA-3",
+      tone: "primary",
+      class:
+        "bg-primary-a-4 text-primary-12 hover:bg-primary-a-5 active:bg-primary-a-3",
     },
     {
       variant: "alpha",
       tone: "success",
-      class: "bg-jadeA-4 text-jade-12 hover:bg-jadeA-5 active:bg-jadeA-3",
+      class:
+        "bg-success-a-4 text-success-12 hover:bg-success-a-5 active:bg-success-a-3",
     },
     {
       variant: "alpha",
       tone: "error",
-      class: "bg-rubyA-4 text-ruby-12 hover:bg-rubyA-5 active:bg-rubyA-3",
+      class:
+        "bg-error-a-4 text-error-12 hover:bg-error-a-5 active:bg-error-a-3",
     },
   ],
   defaultVariants: {

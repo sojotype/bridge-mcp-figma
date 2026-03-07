@@ -23,29 +23,29 @@ const root = tv({
 const field = tv({
   base: [
     "flex h-7 items-center rounded-sm pr-1",
-    "bg-gray-2 text-body text-gray-10",
-    "focus-within:shadow-[0_0_0_1px_var(--color-blue-8)_inset] hover:shadow-[0_0_0_1px_var(--color-grayA-6)_inset] hover:transition-none focus-within:hover:shadow-[0_0_0_1px_var(--color-blue-8)_inset]",
+    "bg-neutral-2 text-body text-neutral-10",
+    "focus-within:shadow-[0_0_0_1px_var(--color-primary-8)_inset] hover:shadow-[0_0_0_1px_var(--color-neutral-a-6)_inset] hover:transition-none focus-within:hover:shadow-[0_0_0_1px_var(--color-primary-8)_inset]",
     "transition-[box-shadow,background-color] duration-300 ease-out",
   ].join(" "),
   variants: {
     hasError: {
-      true: "bg-ruby-2 shadow-[0_0_0_1px_var(--color-ruby-8)_inset] focus-within:shadow-[0_0_0_1px_var(--color-ruby-8)_inset] hover:shadow-[0_0_0_1px_var(--color-ruby-8)_inset] focus-within:hover:shadow-[0_0_0_1px_var(--color-ruby-8)_inset]",
+      true: "bg-error-2 shadow-[0_0_0_1px_var(--color-error-8)_inset] focus-within:shadow-[0_0_0_1px_var(--color-error-8)_inset] hover:shadow-[0_0_0_1px_var(--color-error-8)_inset] focus-within:hover:shadow-[0_0_0_1px_var(--color-error-8)_inset]",
     },
   },
 });
 
 const inputStyles =
-  "pl-2 flex-1 bg-transparent text-body text-gray-11 placeholder:text-gray-10 outline-none";
+  "pl-2 flex-1 bg-transparent text-body text-neutral-11 placeholder:text-neutral-10 outline-none";
 
 const buttonStyles = tv({
   base: [
-    "ml-1 flex h-5 items-center overflow-hidden rounded-[2px] bg-gray-4 text-caption font-medium text-gray-10",
-    "hover:shadow-[0_0_0_1px_var(--color-grayA-4)_inset]",
+    "ml-1 flex h-5 items-center overflow-hidden rounded-[2px] bg-neutral-4 text-caption font-medium text-neutral-10",
+    "hover:shadow-[0_0_0_1px_var(--color-neutral-a-4)_inset]",
     "transition-[background-color,color] duration-150 ease-out",
   ],
   variants: {
     variant: {
-      user: "text-blue-10",
+      user: "text-primary-10",
       default: "",
     },
     interactive: {
@@ -53,7 +53,7 @@ const buttonStyles = tv({
       false: "pointer-events-none",
     },
     hasError: {
-      true: "bg-ruby-4 text-ruby-10 hover:shadow-[0_0_0_1px_var(--color-rubyA-4)_inset]",
+      true: "bg-error-4 text-error-10 hover:shadow-[0_0_0_1px_var(--color-error-a-4)_inset]",
       false: "",
     },
   },
@@ -314,7 +314,7 @@ export const Input = ({
         {showEnterKey ? (
           <Icon
             aria-hidden
-            className="size-4 text-gray-7"
+            className="size-4 text-neutral-7"
             focusable="false"
             name="enterKey"
           />

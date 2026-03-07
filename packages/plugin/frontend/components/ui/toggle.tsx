@@ -6,16 +6,16 @@ import { Tooltip } from "./tooltip";
 const toggle = tv({
   base: [
     "flex h-6 w-fit items-center justify-center gap-x-[3px] overflow-hidden rounded py-1 pr-1 pl-2",
-    "bg-gray-4 shadow-[inset_0_0_0_1px_var(--color-grayA-3)]",
-    "text-body text-gray-11",
+    "bg-neutral-4 shadow-[inset_0_0_0_1px_var(--color-neutral-a-3)]",
+    "text-body text-neutral-11",
     "transition-[background-color,box-shadow,color] duration-300 ease-out hover:transition-none",
-    "hover:shadow-[inset_0_0_0_1px_var(--color-grayA-6)]",
+    "hover:shadow-[inset_0_0_0_1px_var(--color-neutral-a-6)]",
   ].join(" "),
   variants: {
     pressed: {
       true: [
-        "bg-gray-1 text-gray-12 shadow-[inset_0_0_0_1px_var(--color-grayA-5)]",
-        "hover:shadow-[inset_0_0_0_1px_var(--color-grayA-5)]",
+        "bg-neutral-1 text-neutral-12 shadow-[inset_0_0_0_1px_var(--color-neutral-a-5)]",
+        "hover:shadow-[inset_0_0_0_1px_var(--color-neutral-a-5)]",
       ].join(" "),
     },
   },

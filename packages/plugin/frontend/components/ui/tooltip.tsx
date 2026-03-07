@@ -11,8 +11,8 @@ const positionerStyles = "z-40 data-closed:z-40 data-open:z-50";
 
 const popupStyles = [
   "flex h-7 flex-col justify-center rounded-sm px-2",
-  "bg-gray-1 text-body text-gray-11",
-  "shadow-lg shadow-gray-8 dark:shadow-gray-5",
+  "bg-neutral-1 text-body text-neutral-11",
+  "shadow-lg shadow-neutral-8 dark:shadow-neutral-5",
   "transition-[opacity,filter] will-change-[opacity,filter] data-ending-style:duration-300",
   "data-ending-style:opacity-0 data-ending-style:blur-xs",
 ].join(" ");

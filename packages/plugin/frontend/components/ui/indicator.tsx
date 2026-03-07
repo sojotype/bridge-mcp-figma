@@ -27,14 +27,14 @@ const glow = tv({
   variants: {
     variant: {
       online:
-        "bg-[radial-gradient(circle_at_50%_50%,var(--color-jade-9)_0%,transparent_70%)]",
+        "bg-[radial-gradient(circle_at_50%_50%,var(--color-success-9)_0%,transparent_70%)]",
       offline:
-        "bg-[radial-gradient(circle_at_50%_50%,var(--color-ruby-9)_0%,transparent_70%)]",
+        "bg-[radial-gradient(circle_at_50%_50%,var(--color-error-9)_0%,transparent_70%)]",
       warning:
-        "bg-[radial-gradient(circle_at_50%_50%,var(--color-orange-9)_0%,transparent_70%)]",
-      idle: "bg-[radial-gradient(circle_at_50%_50%,var(--color-blue-9)_0%,transparent_70%)] opacity-0 ease-in",
+        "bg-[radial-gradient(circle_at_50%_50%,var(--color-warning-9)_0%,transparent_70%)]",
+      idle: "bg-[radial-gradient(circle_at_50%_50%,var(--color-primary-9)_0%,transparent_70%)] opacity-0 ease-in",
       connecting:
-        "bg-[radial-gradient(circle_at_50%_50%,var(--color-blue-9)_0%,transparent_70%)]",
+        "bg-[radial-gradient(circle_at_50%_50%,var(--color-primary-9)_0%,transparent_70%)]",
     },
   },
 });
@@ -46,11 +46,11 @@ const dot = tv({
   ],
   variants: {
     variant: {
-      online: "bg-jade-9",
-      offline: "bg-ruby-9",
-      warning: "bg-orange-9",
-      idle: "bg-gray-9 ease-in",
-      connecting: "bg-blue-9",
+      online: "bg-success-9",
+      offline: "bg-error-9",
+      warning: "bg-warning-9",
+      idle: "bg-neutral-9 ease-in",
+      connecting: "bg-primary-9",
     },
   },
 });
@@ -316,7 +316,7 @@ export function Indicator({ variant = "online" }: IndicatorProps) {
             >
               <div
                 style={{
-                  backgroundColor: "var(--color-blue-9)",
+                  backgroundColor: "var(--color-primary-9)",
                   height: "100%",
                   maskImage: conicMask,
                   WebkitMaskImage: conicMask,

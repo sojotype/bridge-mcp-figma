@@ -7,20 +7,20 @@ import { Icon } from "./icon";
 const root = tv({
   base: [
     "peer group my-px inline-flex size-4.5 shrink-0 items-center justify-center rounded-[3px]",
-    "bg-gray-1",
+    "bg-neutral-1",
     "transition-[background-color,box-shadow,color] duration-300 ease-out",
-    "group-hover:shadow-[inset_0_0_0_1px_var(--color-grayA-6)] hover:shadow-[inset_0_0_0_1px_var(--color-grayA-6)]",
+    "group-hover:shadow-[inset_0_0_0_1px_var(--color-neutral-a-6)] hover:shadow-[inset_0_0_0_1px_var(--color-neutral-a-6)]",
     "data-unchecked:group-hover:transition-none data-unchecked:hover:transition-none",
-    "focus-visible:ring-1 focus-visible:ring-blue-8 focus-visible:ring-offset-0 focus-visible:outline-none",
-    "data-checked:bg-blue-3 data-checked:shadow-[inset_0_0_0_1px_var(--color-blue-10)]",
-    "data-indeterminate:bg-blueA-2 data-indeterminate:shadow-[inset_0_0_0_1px_var(--color-blue-8)]",
+    "focus-visible:ring-1 focus-visible:ring-primary-8 focus-visible:ring-offset-0 focus-visible:outline-none",
+    "data-checked:bg-primary-3 data-checked:shadow-[inset_0_0_0_1px_var(--color-primary-10)]",
+    "data-indeterminate:bg-primary-a-2 data-indeterminate:shadow-[inset_0_0_0_1px_var(--color-primary-8)]",
     "data-disabled:cursor-not-allowed data-disabled:opacity-50",
   ].join(" "),
 });
 
 const indicator = tv({
   base: [
-    "flex size-full items-center justify-center text-blue-11",
+    "flex size-full items-center justify-center text-primary-11",
     "transition-[opacity,transform] duration-150 ease-out",
     "data-unchecked:scale-75 data-unchecked:opacity-0",
     "data-checked:scale-100 data-checked:opacity-100",
@@ -30,7 +30,7 @@ const indicator = tv({
 
 const label = tv({
   base: [
-    "group w-fill inline-flex items-start gap-2 py-1 text-body text-gray-11",
+    "group w-fill inline-flex items-start gap-2 py-1 text-body text-neutral-11",
   ],
 });
 
@@ -56,7 +56,7 @@ export function Checkbox({ text, className, ...props }: CheckboxProps) {
           />
         </C.Indicator>
       </C.Root>
-      <span className="peer-data-checked:text-blue-11 peer-data-indeterminate:text-blue-11">
+      <span className="peer-data-checked:text-primary-11 peer-data-indeterminate:text-primary-11">
         {text}
       </span>
     </label>

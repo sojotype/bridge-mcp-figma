@@ -303,6 +303,68 @@ const Checkmark = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const WarningTriangle = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    aria-label={props["aria-label"] ?? "Warning Triangle"}
+    fill="currentColor"
+    height={16}
+    viewBox="0 0 16 16"
+    width={16}
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path
+      d="M14.8 11.756 9.334 2.264a1.548 1.548 0 0 0-2.668 0L1.2 11.756a1.47 1.47 0 0 0 0 1.482A1.52 1.52 0 0 0 2.534 14h10.932A1.522 1.522 0 0 0 15 12.497c0-.26-.069-.516-.2-.741Zm-.867.982a.532.532 0 0 1-.467.262H2.534a.532.532 0 0 1-.467-.262.474.474 0 0 1 0-.483l5.466-9.492a.547.547 0 0 1 .937 0l5.466 9.492a.475.475 0 0 1-.003.482ZM7.5 9V6.5a.5.5 0 0 1 1 0V9a.5.5 0 1 1-1 0Zm1.25 2.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+const Plus = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    aria-label={props["aria-label"] ?? "Plus"}
+    fill="currentColor"
+    height={16}
+    viewBox="0 0 16 16"
+    width={16}
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path d="M9 7H14V8H9V13H8V8H3V7H8V2H9V7Z" fill="currentColor" />
+  </svg>
+);
+
+const Minus = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    aria-label={props["aria-label"] ?? "Minus"}
+    fill="currentColor"
+    height={16}
+    viewBox="0 0 16 16"
+    width={16}
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path d="M14 8H3V7h11v1Z" fill="currentColor" />
+  </svg>
+);
+
+const ExternalLink = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    aria-label={props["aria-label"] ?? "External Link"}
+    fill="currentColor"
+    height={16}
+    viewBox="0 0 16 16"
+    width={16}
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path
+      d="M14 6.5a.5.5 0 0 1-1 0V3.708L8.854 7.854a.5.5 0 1 1-.707-.708L12.293 3H9.5a.5.5 0 1 1 0-1h4a.5.5 0 0 1 .5.5v4ZM11.5 8a.5.5 0 0 0-.5.5V13H3V5h4.5a.5.5 0 1 0 0-1H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8.5a.5.5 0 0 0-.5-.5Z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
 const iconMap = {
   plugsDisconnected: PlugsDisconnected,
   plugsConnected: PlugsConnected,
@@ -321,4 +383,8 @@ const iconMap = {
   enterKey: EnterKey,
   mail: Mail,
   checkmark: Checkmark,
+  warningTriangle: WarningTriangle,
+  plus: Plus,
+  minus: Minus,
+  externalLink: ExternalLink,
 } as const;

@@ -4,14 +4,13 @@ import { Tooltip } from "./tooltip";
 
 const tab = tv({
   base: [
-    "flex size-7 items-center justify-center gap-x-1.5 rounded bg-gray-4 px-2 py-1 text-body text-gray-12 shadow-[inset_0_0_0_1px_var(--color-grayA-3)]",
+    "flex size-7 items-center justify-center gap-x-1.5 rounded bg-neutral-4 px-2 py-1 text-body text-neutral-12 shadow-[inset_0_0_0_1px_var(--color-neutral-a-3)]",
     "transition-[background-color] duration-300 ease-out",
-    "hover:bg-gray-6 hover:transition-none",
-    "will-change-[background-color]",
+    "hover:bg-neutral-6 hover:transition-none",
   ].join(" "),
   variants: {
     active: {
-      true: "bg-blueA-2 shadow-[inset_0_0_0_1px_var(--color-blue-8)] hover:bg-blueA-2",
+      true: "bg-primary-a-2 shadow-[inset_0_0_0_1px_var(--color-primary-8)] hover:bg-primary-a-2",
     },
   },
 });
