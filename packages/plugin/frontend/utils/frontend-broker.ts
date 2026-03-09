@@ -3,13 +3,23 @@
  * Frontend uses this to post messages to the plugin and to listen for messages from it.
  */
 
-export type BackendBrokerPayload =
+export type FrontendBrokerPayload =
   | { event: "ready"; data?: undefined }
   | { event: "wsOpened"; data?: undefined }
   | { event: "wsMessage"; data: string }
-  | { event: "wsClosed"; data?: undefined };
+  | { event: "wsClosed"; data?: undefined }
+  | { event: "uiResize"; data: { height: number } };
 
-const post = (event: string, data?: unknown) => {
+type FrontendEvent = FrontendBrokerPayload["event"];
+type FrontendEventData<E extends FrontendEvent> = Extract<
+  FrontendBrokerPayload,
+  { event: E }
+>["data"];
+
+const post = <E extends FrontendEvent>(
+  event: E,
+  data?: FrontendEventData<E>
+) => {
   window.parent.postMessage({ pluginMessage: { event, data } }, "*");
 };
 
@@ -36,4 +46,4 @@ const listen = (callback: (event: string, data: unknown) => void) => {
   return () => window.removeEventListener("message", handler);
 };
 
-export const backendBroker = { post, listen };
+export const frontendBroker = { post, listen };

@@ -3,7 +3,7 @@
  * Backend uses this to post messages to the UI iframe and to listen for messages from it.
  */
 
-export type FrontendBrokerPayload =
+export type BackendBrokerPayload =
   | { event: "connect"; data: { host: string; room: string } }
   | { event: "send"; data: string }
   | { event: "connected"; data: { sessionId: string; userHash: string } }
@@ -41,4 +41,4 @@ const listen = (callback: (event: string, data: unknown) => void) => {
   };
 };
 
-export const frontendBroker = { post, listen };
+export const backendBroker = { post, listen };
