@@ -22,6 +22,7 @@ interface CalloutProps {
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
   showHeaderIcon?: boolean;
+  iconNameOverride?: IconName;
 }
 
 const iconMap = {
@@ -192,6 +193,7 @@ export const Callout = ({
   collapsed,
   onCollapsedChange,
   showHeaderIcon = true,
+  iconNameOverride,
 }: CalloutProps) => {
   const animeRoot = useRef<HTMLDivElement | null>(null);
   const animeScope = useRef<Scope | null>(null);
@@ -206,7 +208,7 @@ export const Callout = ({
 
   const [isIconVisible, setIsIconVisible] = useState(showHeaderIcon);
 
-  const iconName = iconMap[tone];
+  const iconName = iconNameOverride ?? iconMap[tone];
   const showHeader = Boolean(title);
 
   useEffect(() => {
@@ -223,8 +225,8 @@ export const Callout = ({
         duration: 150,
         ease: "out(2)",
         properties: ["transform", "width", "columnGap"],
-        enterFrom: { transform: "translateX(-120px)", opacity: 0 },
-        leaveTo: { transform: "translateX(-120px)", opacity: 0 },
+        enterFrom: { transform: "translateX(-100%)", opacity: 0 },
+        leaveTo: { transform: "translateX(-100%)", opacity: 0 },
       });
     });
 
