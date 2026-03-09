@@ -35,6 +35,10 @@ const button = tv({
       success: "",
       error: "",
     },
+    showIcon: {
+      true: "size-7",
+      false: "",
+    },
   },
   compoundVariants: [
     // Solid buttons (filled)
@@ -108,8 +112,7 @@ export const Button = ({
 
   return (
     <button
-      className={button({ variant, tone, className })}
-      type={type}
+      className={button({ variant, tone, className, showIcon })}
       {...props}
     >
       {showIcon && (

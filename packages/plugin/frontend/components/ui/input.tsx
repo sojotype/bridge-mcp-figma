@@ -8,7 +8,7 @@ import { Icon } from "./icon";
 export interface InputProps {
   id?: string;
   value: string;
-  state: "user" | "default";
+  owner: "user" | "default";
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   onSubmit?: (value: string) => void;
@@ -83,11 +83,11 @@ function getUserLabel(isHovered: boolean, isButtonFocused: boolean): UserLabel {
 }
 
 function getInputStateLabel(
-  state: InputProps["state"],
+  owner: InputProps["owner"],
   isHovered: boolean,
   isButtonFocused: boolean
 ): InputStateLabel {
-  if (state === "default") {
+  if (owner === "default") {
     return "Default";
   }
   return getUserLabel(isHovered, isButtonFocused);
@@ -137,17 +137,17 @@ function UserState({
 }
 
 function InputState({
-  state,
+  owner,
   isHovered,
   isButtonFocused,
 }: {
-  state: InputProps["state"];
+  owner: InputProps["owner"];
   isHovered: boolean;
   isButtonFocused: boolean;
 }) {
   const measureRef = useRef<HTMLSpanElement>(null);
   const [contentWidth, setContentWidth] = useState<number>();
-  const currentLabel = getInputStateLabel(state, isHovered, isButtonFocused);
+  const currentLabel = getInputStateLabel(owner, isHovered, isButtonFocused);
 
   useLayoutEffect(() => {
     const node = measureRef.current;
@@ -179,7 +179,7 @@ function InputState({
       </span>
       <motion.span
         animate={{
-          y: state === "default" ? "0%" : "-50%",
+          y: owner === "default" ? "0%" : "-50%",
         }}
         className="absolute top-0 right-0 flex h-[200%] flex-col items-end"
         initial={false}
@@ -211,7 +211,7 @@ function isValidUrl(value: string) {
 
 export const Input = ({
   value,
-  state,
+  owner,
   defaultValue = "",
   onValueChange,
   onSubmit,
@@ -242,7 +242,7 @@ export const Input = ({
   }, [value]);
 
   const isDirty = draft !== committedValue;
-  const isButtonInteractive = state === "user";
+  const isButtonInteractive = owner === "user";
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const next = event.target.value;
@@ -339,7 +339,7 @@ export const Input = ({
           <InputState
             isButtonFocused={isButtonFocused}
             isHovered={isHovered}
-            state={state}
+            owner={owner}
           />
         </motion.button>
       </label>

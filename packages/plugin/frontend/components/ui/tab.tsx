@@ -1,38 +1,88 @@
+import { Tabs as BaseTabs } from "@base-ui/react/tabs";
 import { tv } from "../../utils/tv";
-import { Icon, type IconName } from "./icon";
+import { Indicator } from "./indicator";
 import { Tooltip } from "./tooltip";
 
-const tab = tv({
+const toggle = tv({
   base: [
-    "flex size-7 items-center justify-center gap-x-1.5 rounded bg-neutral-4 px-2 py-1 text-body text-neutral-12 shadow-[inset_0_0_0_1px_var(--color-neutral-a-3)]",
-    "transition-[background-color] duration-300 ease-out",
-    "hover:bg-neutral-6 hover:transition-none",
+    "flex h-6 w-fit items-center justify-center gap-x-[3px] overflow-hidden rounded py-1 pr-1 pl-2",
+    "bg-neutral-4 shadow-[inset_0_0_0_1px_var(--color-neutral-a-3)]",
+    "text-body text-neutral-11",
+    "transition-[background-color,box-shadow,color] duration-300 ease-out hover:transition-none",
+    "hover:shadow-[inset_0_0_0_1px_var(--color-neutral-a-6)]",
   ].join(" "),
   variants: {
     active: {
-      true: "bg-primary-a-2 shadow-[inset_0_0_0_1px_var(--color-primary-8)] hover:bg-primary-a-2",
+      true: [
+        "bg-neutral-1 text-neutral-12 shadow-[inset_0_0_0_1px_var(--color-neutral-a-5)]",
+        "hover:shadow-[inset_0_0_0_1px_var(--color-neutral-a-5)]",
+      ].join(" "),
     },
   },
 });
 
-interface TabProps {
-  active: boolean;
-  iconName: IconName;
-  tooltip: string;
-  onClick?: () => void;
+export interface TabsRootProps {
+  children: React.ReactNode;
+  defaultValue?: BaseTabs.Tab.Value;
+  value?: BaseTabs.Tab.Value;
+  onValueChange?: BaseTabs.Root.Props["onValueChange"];
 }
 
-export const Tab = ({
-  tooltip,
-  active,
-  iconName = "plugsDisconnected",
-  onClick,
-}: TabProps) => {
+export interface TabItemProps {
+  label?: string;
+  value: string;
+  state: "online" | "offline" | "connecting" | "idle" | "warning";
+}
+
+const stateLabels: Record<TabItemProps["state"], string> = {
+  online: "Online",
+  offline: "Offline",
+  connecting: "Connecting",
+  idle: "Idle",
+  warning: "Warning",
+};
+
+function TabsRoot({
+  children,
+  defaultValue,
+  value,
+  onValueChange,
+}: TabsRootProps) {
   return (
-    <Tooltip content={tooltip} onClick={onClick}>
-      <div className={tab({ active })}>
-        <Icon className="size-4 shrink-0" name={iconName} />
-      </div>
+    <BaseTabs.Root
+      defaultValue={defaultValue}
+      onValueChange={onValueChange}
+      value={value}
+    >
+      {children}
+    </BaseTabs.Root>
+  );
+}
+
+function TabItem({ label = "Toggle", value, state }: TabItemProps) {
+  const tooltipContent = stateLabels[state];
+
+  return (
+    <Tooltip content={tooltipContent}>
+      <BaseTabs.Tab
+        className={(tabState) =>
+          toggle({
+            active: tabState.active,
+          })
+        }
+        value={value}
+      >
+        <span className="relative z-2 shrink-0 whitespace-nowrap">{label}</span>
+        <Indicator variant={state} />
+      </BaseTabs.Tab>
     </Tooltip>
   );
+}
+
+export const Tabs = {
+  Root: TabsRoot,
+  List: BaseTabs.List,
+  Item: TabItem,
+  Panel: BaseTabs.Panel,
+  Indicator: BaseTabs.Indicator,
 };
