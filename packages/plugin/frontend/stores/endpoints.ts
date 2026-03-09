@@ -2,6 +2,7 @@ import { proxy } from "valtio";
 
 export interface EndpointsState {
   mcp: {
+    selectedMode: "local" | "remote";
     local: {
       defaultUrl: string;
       userUrl: string | null;
@@ -12,6 +13,7 @@ export interface EndpointsState {
     };
   };
   websocket: {
+    selectedMode: "local" | "remote";
     local: {
       defaultUrl: string;
       userUrl: string | null;
@@ -25,6 +27,7 @@ export interface EndpointsState {
 
 export const endpointsStore = proxy<EndpointsState>({
   mcp: {
+    selectedMode: "local",
     local: {
       defaultUrl: __MCP_LOCAL_URL__,
       userUrl: null,
@@ -35,6 +38,7 @@ export const endpointsStore = proxy<EndpointsState>({
     },
   },
   websocket: {
+    selectedMode: "local",
     local: {
       defaultUrl: __WEBSOCKET_LOCAL_URL__,
       userUrl: null,

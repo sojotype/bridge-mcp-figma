@@ -1,25 +1,41 @@
 import { Tooltip } from "@base-ui/react";
-import { useLocation, useNavigate } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router";
+import { ROUTES } from "../../routes";
 import { Callout } from "../ui/callout";
 import { Icon } from "../ui/icon";
 import { Link } from "../ui/link";
 import { Tab } from "../ui/tab";
 
-export default function Header() {
-  const location = useLocation();
-  const pathname = location.pathname;
+interface HeaderProps {
+  route: keyof typeof ROUTES;
+}
 
+export default function Header({ route }: HeaderProps) {
   const navigate = useNavigate();
+  const isTargetRoute = route === ROUTES.ROOT || route === ROUTES.WEBSOCKET;
+
+  const [isCollapsed, setIsCollapsed] = useState(!isTargetRoute);
+  const prevTargetRef = useRef(isTargetRoute);
+
+  useEffect(() => {
+    if (prevTargetRef.current && !isTargetRoute) {
+      setIsCollapsed(true);
+    } else if (!prevTargetRef.current && isTargetRoute) {
+      setIsCollapsed(false);
+    }
+    prevTargetRef.current = isTargetRoute;
+  }, [isTargetRoute]);
 
   return (
-    <header>
-      <nav className="flex justify-between p-3">
+    <header className="flex w-full flex-col">
+      <nav className="flex w-full justify-between p-3">
         <Tooltip.Provider delay={500} timeout={500}>
           <div className="flex items-center gap-1">
             <Tab
-              active={pathname === "/"}
+              active={route === ROUTES.ROOT}
               iconName="mcp"
-              onClick={() => navigate("/")}
+              onClick={() => navigate(ROUTES.ROOT)}
               tooltip="MCP"
             />
             <Icon
@@ -27,9 +43,9 @@ export default function Header() {
               name="caretRight"
             />
             <Tab
-              active={pathname === "/ws"}
-              iconName={status === "ws-available" ? "globe" : "globeX"}
-              onClick={() => navigate("/ws")}
+              active={route === ROUTES.WEBSOCKET}
+              iconName="globe"
+              onClick={() => navigate(ROUTES.WEBSOCKET)}
               tooltip="WebSocket"
             />
             <Icon
@@ -37,25 +53,25 @@ export default function Header() {
               name="caretRight"
             />
             <Tab
-              active={pathname === "/session"}
+              active={route === ROUTES.SESSION}
               iconName={
                 status === "connected" ? "plugsConnected" : "plugsDisconnected"
               }
-              onClick={() => navigate("/session")}
+              onClick={() => navigate(ROUTES.SESSION)}
               tooltip="Session"
             />
           </div>
           <div className="flex items-center gap-2">
             <Tab
-              active={pathname === "/about"}
+              active={route === ROUTES.ABOUT}
               iconName="infoCircle"
-              onClick={() => navigate("/about")}
+              onClick={() => navigate(ROUTES.ABOUT)}
               tooltip="About"
             />
             <Tab
-              active={pathname === "/mini"}
+              active={route === ROUTES.MINI}
               iconName="minimize"
-              onClick={() => navigate("/mini")}
+              onClick={() => navigate(ROUTES.MINI)}
               tooltip="Minimize"
             />
           </div>
@@ -63,7 +79,9 @@ export default function Header() {
       </nav>
       <Callout
         className="mx-3"
+        collapsed={isCollapsed}
         collapsible
+        onCollapsedChange={setIsCollapsed}
         title="Official Remote service is not available now"
         tone="neutral"
       >

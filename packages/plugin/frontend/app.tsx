@@ -1,6 +1,4 @@
-import { Activity } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
-import { HistoryNavigator } from "./components/history-navigator";
 import Footer from "./components/layout/footer";
 import Header from "./components/layout/header";
 import AboutScreen from "./components/screens/about";
@@ -9,7 +7,10 @@ import MCPScreen from "./components/screens/mcp";
 import MiniScreen from "./components/screens/mini";
 import SessionScreen from "./components/screens/session";
 import WarningScreen from "./components/screens/warning";
-import WSScreen from "./components/screens/ws";
+import WebSocketScreen from "./components/screens/websocket";
+import { FitContainer } from "./components/utils/fit-container";
+import { HistoryNavigator } from "./components/utils/history-navigator";
+import type { ROUTES } from "./routes";
 
 export const App = () => {
   return (
@@ -33,27 +34,20 @@ function WarningLayout() {
 }
 
 function MainLayout() {
-  const location = useLocation();
-  const pathname = location.pathname;
+  const route = useLocation().pathname as keyof typeof ROUTES;
 
   return (
-    <div className="flex flex-col bg-neutral-4 font-sans">
+    <FitContainer className="flex h-full flex-col overflow-hidden bg-neutral-4 font-sans">
       {/* Header */}
-      <Header />
+      <Header route={route} />
       {/* Screens */}
-      <Activity mode={pathname === "/" ? "visible" : "hidden"}>
-        <MCPScreen />
-      </Activity>
-      <Activity mode={pathname === "/session" ? "visible" : "hidden"}>
-        <SessionScreen />
-      </Activity>
-      <Activity mode={pathname === "/ws" ? "visible" : "hidden"}>
-        <WSScreen />
-      </Activity>
-      {pathname === "/about" && <AboutScreen />}
-      {pathname === "/mini" && <MiniScreen />}
+      <MCPScreen route={route} />
+      <WebSocketScreen route={route} />
+      <SessionScreen route={route} />
+      <AboutScreen route={route} />
+      <MiniScreen route={route} />
       {/* Footer */}
-      <Footer />
-    </div>
+      <Footer route={route} />
+    </FitContainer>
   );
 }
