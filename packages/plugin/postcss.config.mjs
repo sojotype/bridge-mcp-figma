@@ -1,4 +1,5 @@
 const BASE_FONT_SIZE = 16;
+const PX_SUFFIX = /px$/;
 
 /**
  * Converts a numeric value (e.g. 14 or "14px") to rem using base font size.
@@ -6,7 +7,7 @@ const BASE_FONT_SIZE = 16;
  * In CSS use: rem(14) or rem(14px) → 0.875rem
  */
 function rem(value) {
-  const num = Number.parseFloat(String(value).replace(/px$/, ""), 10);
+  const num = Number.parseFloat(String(value).replace(PX_SUFFIX, ""), 10);
   if (Number.isNaN(num)) {
     return value;
   }

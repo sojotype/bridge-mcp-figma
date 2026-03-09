@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         backend: resolve(pluginRoot, "backend"),
+        shared: resolve(pluginRoot, "shared"),
       },
     },
     build: {
@@ -35,6 +36,7 @@ export default defineConfig(({ mode }) => {
       target: "es2015",
       rolldownOptions: {
         output: {
+          format: "iife",
           entryFileNames: "code.js",
         },
         input: "./backend/main.ts",
