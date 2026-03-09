@@ -1,12 +1,13 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import {
-  AnimatePresence,
-  MotionConfig,
-  motion,
-  type Transition,
-} from "motion/react";
+  type AutoLayout,
+  createLayout,
+  createScope,
+  type Scope,
+} from "animejs";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { tv } from "../../utils/tv";
 import { Icon, type IconName } from "./icon";
 
@@ -20,6 +21,7 @@ interface CalloutProps {
   collapsible?: boolean;
   collapsed?: boolean;
   onCollapsedChange?: (collapsed: boolean) => void;
+  showHeaderIcon?: boolean;
 }
 
 const iconMap = {
@@ -47,7 +49,7 @@ const callout = tv({
 
 const header = tv({
   base: [
-    "relative flex min-h-7 w-full items-start gap-1.5 overflow-hidden px-2 py-1",
+    "relative flex min-h-7 w-full items-start gap-x-1 overflow-hidden px-2 py-1",
     "transition-[background-color,border-radius] duration-300 ease-out hover:transition-none",
   ],
   variants: {
@@ -105,6 +107,16 @@ const header = tv({
 
 const titleText = tv({
   base: "flex w-full text-left text-body",
+  variants: {
+    tone: {
+      neutral: "text-neutral-12",
+      error: "text-error-12",
+      warning: "text-warning-12",
+    },
+  },
+  defaultVariants: {
+    tone: "neutral",
+  },
 });
 
 const body = tv({
@@ -128,10 +140,28 @@ const panel = tv({
   base: [
     "flex h-(--collapsible-panel-height) w-full flex-col overflow-hidden",
     "[&[hidden]:not([hidden='until-found'])]:hidden",
-    "transition-[height,opacity] duration-200 ease-out",
+    "transition-[height,opacity] duration-150 ease-out",
     "data-closed:opacity-0 data-open:opacity-100",
-    "data-starting-style:h-0 data-ending-style:h-0",
+    "data-ending-style:h-0 data-starting-style:h-0",
   ].join(" "),
+});
+
+const headerIcon = tv({
+  base: "relative flex h-5 shrink-0 items-center",
+  variants: {
+    tone: {
+      neutral: "text-neutral-11",
+      error: "text-error-11",
+      warning: "text-warning-11",
+    },
+    // isCollapsed: {
+    //   true: "hidden",
+    //   false: "",
+    // },
+  },
+  defaultVariants: {
+    tone: "neutral",
+  },
 });
 
 const toggleIcon = tv({
@@ -153,7 +183,6 @@ const toggleIcon = tv({
   },
 });
 
-const TRANSITION = { duration: 0.2, bounce: 0 } as Transition;
 export const Callout = ({
   tone = "neutral",
   title,
@@ -162,46 +191,84 @@ export const Callout = ({
   collapsible = false,
   collapsed,
   onCollapsedChange,
+  showHeaderIcon = true,
 }: CalloutProps) => {
-  const [uncontrolledCollapsed, setUncontrolledCollapsed] = useState(false);
-  const isControlled = collapsed != null;
-  const isCollapsed = isControlled ? collapsed : uncontrolledCollapsed;
+  const animeRoot = useRef<HTMLDivElement | null>(null);
+  const animeScope = useRef<Scope | null>(null);
+  const layoutRefController = useRef<AutoLayout | null>(null);
+  const headerRef = useRef<HTMLButtonElement | null>(null);
+  const headerIconRef = useRef<HTMLSpanElement | null>(null);
 
+  const isControlled = collapsed != null;
+  const [selfCollapsed, setSelfCollapsed] = useState(false);
+
+  const isCollapsed = isControlled ? collapsed : selfCollapsed;
+
+  const [isIconVisible, setIsIconVisible] = useState(showHeaderIcon);
+
+  const iconName = iconMap[tone];
   const showHeader = Boolean(title);
-  const isInteractiveCollapsible = collapsible && showHeader;
+
+  useEffect(() => {
+    if (layoutRefController.current) {
+      return;
+    }
+
+    animeScope.current = createScope({ root: animeRoot }).add(() => {
+      if (!headerRef.current) {
+        return;
+      }
+
+      layoutRefController.current = createLayout(headerRef.current, {
+        duration: 150,
+        ease: "out(2)",
+        properties: ["transform", "width", "columnGap"],
+        enterFrom: { transform: "translateX(-120px)", opacity: 0 },
+        leaveTo: { transform: "translateX(-120px)", opacity: 0 },
+      });
+    });
+
+    return () => animeScope.current?.revert();
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!(layoutRefController.current && showHeaderIcon)) {
+      return;
+    }
+
+    if (!isCollapsed) {
+      flushSync(() => setIsIconVisible(true));
+    }
+
+    layoutRefController.current.update(() => {
+      if (!headerIconRef.current) {
+        return;
+      }
+      headerIconRef.current.style.display = isCollapsed ? "none" : "";
+    });
+  }, [isCollapsed, showHeaderIcon]);
 
   const setCollapsed = (nextCollapsed: boolean) => {
     if (!isControlled) {
-      setUncontrolledCollapsed(nextCollapsed);
+      setSelfCollapsed(nextCollapsed);
     }
     onCollapsedChange?.(nextCollapsed);
   };
 
-  const iconName = iconMap[tone];
   const headerClassName = header({
     tone,
-    collapsible: isInteractiveCollapsible,
-    collapsed: isInteractiveCollapsible && isCollapsed,
+    collapsible,
+    collapsed: isCollapsed,
   });
   const headerContent = (
     <>
-      <AnimatePresence initial={false} mode="popLayout">
-        {!isCollapsed && (
-          <motion.span
-            animate={{ x: 0, opacity: 1 }}
-            className="relative flex h-5 shrink-0 items-center"
-            exit={{ x: -24, opacity: 0 }}
-            initial={{ x: -24, opacity: 0 }}
-            layout="position"
-          >
-            <Icon className="size-4" name={iconName as IconName} />
-          </motion.span>
-        )}
-      </AnimatePresence>
-      <motion.p className={titleText()} layout="position">
-        {title}
-      </motion.p>
-      {isInteractiveCollapsible && (
+      {showHeaderIcon && isIconVisible && (
+        <span className={headerIcon({ tone })} ref={headerIconRef}>
+          <Icon className="size-4" name={iconName as IconName} />
+        </span>
+      )}
+      <p className={titleText({ tone })}>{title}</p>
+      {collapsible && (
         <span
           aria-hidden
           className={toggleIcon({ collapsed: isCollapsed, tone })}
@@ -217,32 +284,29 @@ export const Callout = ({
   );
 
   return (
-    <MotionConfig transition={TRANSITION}>
-      <motion.div className={callout({ tone, className })} layout>
-        {isInteractiveCollapsible ? (
-          <Collapsible.Root
-            onOpenChange={(open) => setCollapsed(!open)}
-            open={!isCollapsed}
+    <div className={callout({ tone, className })} ref={animeRoot}>
+      {collapsible ? (
+        <Collapsible.Root
+          onOpenChange={(open) => setCollapsed(!open)}
+          open={!isCollapsed}
+        >
+          <Collapsible.Trigger
+            aria-label={isCollapsed ? "Expand" : "Collapse"}
+            className={headerClassName}
+            ref={headerRef}
           >
-            <Collapsible.Trigger
-              aria-label={isCollapsed ? "Expand" : "Collapse"}
-              className={headerClassName}
-            >
-              {headerContent}
-            </Collapsible.Trigger>
-            <Collapsible.Panel className={panel()}>
-              <div className={body({ tone })}>{children}</div>
-            </Collapsible.Panel>
-          </Collapsible.Root>
-        ) : (
-          <>
-            {showHeader && (
-              <div className={headerClassName}>{headerContent}</div>
-            )}
+            {headerContent}
+          </Collapsible.Trigger>
+          <Collapsible.Panel className={panel()}>
             <div className={body({ tone })}>{children}</div>
-          </>
-        )}
-      </motion.div>
-    </MotionConfig>
+          </Collapsible.Panel>
+        </Collapsible.Root>
+      ) : (
+        <>
+          {showHeader && <div className={headerClassName}>{headerContent}</div>}
+          <div className={body({ tone })}>{children}</div>
+        </>
+      )}
+    </div>
   );
 };
