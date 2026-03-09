@@ -1,51 +1,94 @@
-import { proxy } from "valtio";
+import { proxy, useSnapshot } from "valtio";
 
 export interface EndpointsState {
   mcp: {
-    selectedMode: "local" | "remote";
-    local: {
-      defaultUrl: string;
-      userUrl: string | null;
+    routing: "local" | "remote";
+    default: {
+      local: string;
+      remote: string;
     };
-    remote: {
-      defaultUrl: string;
-      userUrl: string | null;
+    user: {
+      local: string | null;
+      remote: string | null;
     };
   };
   websocket: {
-    selectedMode: "local" | "remote";
-    local: {
-      defaultUrl: string;
-      userUrl: string | null;
+    routing: "local" | "remote";
+    default: {
+      local: string;
+      remote: string;
     };
-    remote: {
-      defaultUrl: string;
-      userUrl: string | null;
+    user: {
+      local: string | null;
+      remote: string | null;
     };
   };
 }
 
 export const endpointsStore = proxy<EndpointsState>({
   mcp: {
-    selectedMode: "local",
-    local: {
-      defaultUrl: __MCP_LOCAL_URL__,
-      userUrl: null,
+    routing: "local",
+    default: {
+      local: __MCP_LOCAL_URL__,
+      remote: __MCP_REMOTE_URL__,
     },
-    remote: {
-      defaultUrl: __MCP_REMOTE_URL__,
-      userUrl: null,
+    user: {
+      local: null,
+      remote: null,
     },
   },
   websocket: {
-    selectedMode: "local",
-    local: {
-      defaultUrl: __WEBSOCKET_LOCAL_URL__,
-      userUrl: null,
+    routing: "local",
+    default: {
+      local: __WEBSOCKET_LOCAL_URL__,
+      remote: __WEBSOCKET_REMOTE_URL__,
     },
-    remote: {
-      defaultUrl: __WEBSOCKET_REMOTE_URL__,
-      userUrl: null,
+    user: {
+      local: null,
+      remote: null,
     },
   },
 });
+
+type EndpointType = keyof EndpointsState;
+type EndpointRoutingType = EndpointsState["mcp"]["routing"];
+
+export function useEndpoint(type: EndpointType) {
+  const snap = useSnapshot(endpointsStore);
+  const routing = snap[type].routing;
+  const userUrl = snap[type].user[routing];
+  const defaultUrl = snap[type].default[routing];
+  const url = userUrl ?? defaultUrl;
+  const owner: "default" | "user" = userUrl == null ? "default" : "user";
+
+  return {
+    state: {
+      routing,
+      owner,
+      url,
+      defaultUrl,
+    },
+    setRouting: (routing: EndpointRoutingType) => {
+      endpointsStore[type].routing = routing;
+    },
+    setUrl: (nextUrl: string) => {
+      const currentRoute = endpointsStore[type].routing;
+      endpointsStore[type].user[currentRoute] = nextUrl;
+    },
+    submitUrl: (nextUrl: string) => {
+      const currentRoute = endpointsStore[type].routing;
+      const normalizedValue = nextUrl.trim();
+      const normalizedDefault =
+        endpointsStore[type].default[currentRoute].trim();
+
+      endpointsStore[type].user[currentRoute] =
+        normalizedValue === "" || normalizedValue === normalizedDefault
+          ? null
+          : nextUrl;
+    },
+    resetUrl: () => {
+      const currentRoute = endpointsStore[type].routing;
+      endpointsStore[type].user[currentRoute] = null;
+    },
+  };
+}
