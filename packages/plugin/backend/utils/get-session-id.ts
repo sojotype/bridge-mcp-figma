@@ -1,3 +1,5 @@
+import { generateUUID } from "shared/uuid";
+
 const STORAGE_PREFIX = "session_";
 
 /**
@@ -10,7 +12,19 @@ export async function getSessionId(fileKey: string): Promise<string> {
   if (existing && typeof existing === "string") {
     return existing;
   }
-  const sessionId = `room_${crypto.randomUUID()}`;
+  const sessionId = `room_${generateUUID()}`;
   await figma.clientStorage.setAsync(key, sessionId);
   return sessionId;
 }
+
+/**
+ * TODO: refactor to getSessionData to get data for specific userHash
+ * clientStorage: {
+ *   userHash: {
+ *     sessionId,
+ *     settings: {
+ *       ...
+ *     },
+ *   },
+ * }
+ */

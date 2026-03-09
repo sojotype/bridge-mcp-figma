@@ -1,49 +1,107 @@
 /**
  * Broker for frontend → backend communication.
- * Frontend uses this to post messages to the plugin and to listen for messages from it.
  */
 
-export type FrontendBrokerPayload =
-  | { event: "ready"; data?: undefined }
-  | { event: "wsOpened"; data?: undefined }
-  | { event: "wsMessage"; data: string }
-  | { event: "wsClosed"; data?: undefined }
-  | { event: "uiResize"; data: { height: number } };
+import type {
+  BackendToFrontend,
+  EventData,
+  FrontendToBackend,
+  RequestResponseMap,
+} from "../../shared/events";
+import { generateUUID } from "../../shared/uuid";
 
-type FrontendEvent = FrontendBrokerPayload["event"];
-type FrontendEventData<E extends FrontendEvent> = Extract<
-  FrontendBrokerPayload,
-  { event: E }
->["data"];
+type OutEvent = FrontendToBackend["event"];
+type InEvent = BackendToFrontend["event"];
 
-const post = <E extends FrontendEvent>(
+const listeners = new Map<string, Set<(data: unknown) => void>>();
+
+window.addEventListener("message", (e: MessageEvent) => {
+  const m = e.data?.pluginMessage ?? e.data;
+  if (m && typeof m?.event === "string") {
+    const set = listeners.get(m.event);
+    if (set) {
+      for (const cb of set) {
+        cb(m.data);
+      }
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
+
+/** Post a typed message to the backend. */
+const post = <E extends OutEvent>(
   event: E,
-  data?: FrontendEventData<E>
-) => {
-  window.parent.postMessage({ pluginMessage: { event, data } }, "*");
+  ...args: EventData<FrontendToBackend, E> extends undefined
+    ? []
+    : [data: EventData<FrontendToBackend, E>]
+): void => {
+  window.parent.postMessage({ pluginMessage: { event, data: args[0] } }, "*");
 };
 
 /**
- * Registers a single handler for all messages from the backend.
- * Messages from plugin arrive as event.data.pluginMessage = { event, data }.
+ * Subscribe to a specific incoming event. Returns an unsubscribe function.
+ *
+ * @example
+ * frontendBroker.on("connected", (data) => { ... });
  */
-const listen = (callback: (event: string, data: unknown) => void) => {
-  const handler = (e: MessageEvent) => {
-    const m = e.data?.pluginMessage;
-    if (
-      m &&
-      typeof m === "object" &&
-      "event" in m &&
-      typeof (m as { event: string }).event === "string"
-    ) {
-      callback(
-        (m as { event: string; data?: unknown }).event,
-        (m as { event: string; data?: unknown }).data
-      );
-    }
-  };
-  window.addEventListener("message", handler);
-  return () => window.removeEventListener("message", handler);
+const on = <E extends InEvent>(
+  event: E,
+  callback: (data: EventData<BackendToFrontend, E>) => void
+): (() => void) => {
+  let set = listeners.get(event);
+  if (!set) {
+    set = new Set();
+    listeners.set(event, set);
+  }
+  const cb = callback as (data: unknown) => void;
+  set.add(cb);
+  return () => set?.delete(cb);
 };
 
-export const frontendBroker = { post, listen };
+/**
+ * Post a request and wait for the corresponding response event.
+ * Rejects with a timeout error if no response arrives within `timeoutMs`.
+ *
+ * @example
+ * const { userHash } = await frontendBroker.postAndWait("getUserHash");
+ */
+const postAndWait = <E extends keyof RequestResponseMap>(
+  event: E & OutEvent,
+  options: { timeoutMs?: number } = {}
+): Promise<EventData<BackendToFrontend, RequestResponseMap[E] & InEvent>> => {
+  const { timeoutMs = 5000 } = options;
+  const correlationId = generateUUID();
+  const responseEvent = (
+    { getUserHash: "userHash" } satisfies RequestResponseMap
+  )[event] as RequestResponseMap[E] & InEvent;
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      unsub();
+      reject(
+        new Error(
+          `[frontendBroker] postAndWait("${event}") timed out after ${timeoutMs}ms`
+        )
+      );
+    }, timeoutMs);
+
+    const unsub = on(responseEvent, (data) => {
+      const d = data as { _correlationId?: string };
+      if (d?._correlationId !== correlationId) {
+        return;
+      }
+      clearTimeout(timer);
+      unsub();
+      resolve(
+        data as EventData<BackendToFrontend, RequestResponseMap[E] & InEvent>
+      );
+    });
+
+    if (event === "getUserHash") {
+      post("getUserHash", { _correlationId: correlationId });
+    }
+  });
+};
+
+export const frontendBroker = { post, on, postAndWait };
