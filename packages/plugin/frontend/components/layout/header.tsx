@@ -2,10 +2,11 @@ import { Tooltip } from "@base-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { ROUTES } from "../../routes";
+import { useSession } from "../../stores/session";
 import { Callout } from "../ui/callout";
 import { Icon } from "../ui/icon";
 import { Link } from "../ui/link";
-import { Tab } from "../ui/tab";
+import { TabButton } from "../ui/tab-button";
 
 interface HeaderProps {
   route: keyof typeof ROUTES;
@@ -14,6 +15,7 @@ interface HeaderProps {
 export default function Header({ route }: HeaderProps) {
   const navigate = useNavigate();
   const isTargetRoute = route === ROUTES.ROOT || route === ROUTES.WEBSOCKET;
+  const { status } = useSession();
 
   const [isCollapsed, setIsCollapsed] = useState(!isTargetRoute);
   const prevTargetRef = useRef(isTargetRoute);
@@ -32,7 +34,7 @@ export default function Header({ route }: HeaderProps) {
       <nav className="flex w-full justify-between p-3">
         <Tooltip.Provider delay={500} timeout={500}>
           <div className="flex items-center gap-1">
-            <Tab
+            <TabButton
               active={route === ROUTES.ROOT}
               iconName="mcp"
               onClick={() => navigate(ROUTES.ROOT)}
@@ -42,7 +44,7 @@ export default function Header({ route }: HeaderProps) {
               className="size-3 shrink-0 text-neutral-a-10"
               name="caretRight"
             />
-            <Tab
+            <TabButton
               active={route === ROUTES.WEBSOCKET}
               iconName="globe"
               onClick={() => navigate(ROUTES.WEBSOCKET)}
@@ -52,7 +54,7 @@ export default function Header({ route }: HeaderProps) {
               className="size-3 shrink-0 text-neutral-a-10"
               name="caretRight"
             />
-            <Tab
+            <TabButton
               active={route === ROUTES.SESSION}
               iconName={
                 status === "connected" ? "plugsConnected" : "plugsDisconnected"
@@ -62,13 +64,13 @@ export default function Header({ route }: HeaderProps) {
             />
           </div>
           <div className="flex items-center gap-2">
-            <Tab
+            <TabButton
               active={route === ROUTES.ABOUT}
               iconName="infoCircle"
               onClick={() => navigate(ROUTES.ABOUT)}
               tooltip="About"
             />
-            <Tab
+            <TabButton
               active={route === ROUTES.MINI}
               iconName="minimize"
               onClick={() => navigate(ROUTES.MINI)}
@@ -81,6 +83,7 @@ export default function Header({ route }: HeaderProps) {
         className="mx-3"
         collapsed={isCollapsed}
         collapsible
+        iconNameOverride="warningTriangle"
         onCollapsedChange={setIsCollapsed}
         title="Official Remote service is not available now"
         tone="neutral"

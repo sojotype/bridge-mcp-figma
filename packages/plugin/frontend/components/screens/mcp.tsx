@@ -1,21 +1,22 @@
-import { Activity, useMemo } from "react";
-import { useSnapshot } from "valtio";
+import { Tooltip } from "@base-ui/react";
+import { Activity, useEffect, useMemo, useState } from "react";
 import { ROUTES } from "../../routes";
-import { endpointsStore } from "../../stores/endpoints";
+import { useEndpoint } from "../../stores/endpoints";
+import { copyToClipboard } from "../../utils/copy";
+import { frontendBroker } from "../../utils/frontend-broker";
 import { Button } from "../ui/button";
 import { Gradient } from "../ui/gradient";
 import { Input } from "../ui/input";
+import { Tabs } from "../ui/tab";
 
-type MCPMode = "local" | "remote";
-
-function buildMcpConfig(url: string, mode: MCPMode) {
-  const modeLabel = mode === "local" ? "Local" : "Remote";
-
+function buildMcpConfig(baseUrl: string, userHash: string) {
+  const url = new URL(baseUrl);
+  url.searchParams.set("userHashes", userHash);
   return JSON.stringify(
     {
       mcpServers: {
-        [`Cursor to Figma: ${modeLabel}`]: {
-          url,
+        "Cursor to Figma": {
+          url: url.toString(),
         },
       },
     },
@@ -24,52 +25,47 @@ function buildMcpConfig(url: string, mode: MCPMode) {
   );
 }
 
-async function copyText(value: string) {
-  try {
-    await navigator.clipboard.writeText(value);
-  } catch {
-    // Clipboard API can be blocked in some Figma desktop contexts.
-  }
-}
-
 export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
-  const endpoints = useSnapshot(endpointsStore);
-  const mode = endpoints.mcp.selectedMode;
+  const {
+    state: endpoint,
+    setRouting,
+    setUrl,
+    submitUrl,
+    resetUrl,
+  } = useEndpoint("mcp");
 
-  const selectedEndpoint = endpoints.mcp[mode];
-  const selectedUrl = selectedEndpoint.userUrl ?? selectedEndpoint.defaultUrl;
-  const selectedInputState =
-    selectedEndpoint.userUrl == null ? "default" : "user";
+  const [userHash, setUserHash] = useState<string | null>(null);
+
+  useEffect(() => {
+    frontendBroker.postAndWait("getUserHash").then((data) => {
+      setUserHash(data?.userHash ?? null);
+    });
+  }, []);
 
   const mcpConfig = useMemo(
-    () => buildMcpConfig(selectedUrl, mode),
-    [selectedUrl, mode]
+    () =>
+      userHash ? buildMcpConfig(endpoint.url, userHash) : "Loading user hash…",
+    [endpoint.url, userHash]
   );
 
   const handleUrlChange = (nextValue: string) => {
-    endpointsStore.mcp[mode].userUrl = nextValue;
+    setUrl(nextValue);
   };
 
   const handleUrlSubmit = (nextValue: string) => {
-    const normalizedValue = nextValue.trim();
-    const normalizedDefault = selectedEndpoint.defaultUrl.trim();
-
-    endpointsStore.mcp[mode].userUrl =
-      normalizedValue === "" || normalizedValue === normalizedDefault
-        ? null
-        : nextValue;
+    submitUrl(nextValue);
   };
 
   const handleUrlReset = () => {
-    endpointsStore.mcp[mode].userUrl = null;
+    resetUrl();
   };
 
-  const handleCopyConfig = async () => {
-    await copyText(mcpConfig);
+  const handleCopyConfig = () => {
+    copyToClipboard(mcpConfig);
   };
 
-  const handleAddToCursor = async () => {
-    await copyText(mcpConfig);
+  const handleAddToCursor = () => {
+    copyToClipboard(mcpConfig);
   };
 
   return (
@@ -89,21 +85,36 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
         </p>
 
         <div className="flex min-h-0 w-full shrink grow-0 flex-col gap-2 overflow-hidden px-3 pt-2">
+          <Tooltip.Provider delay={500} timeout={500}>
+            <Tabs.Root
+              onValueChange={(value: string) => {
+                if (value === "local" || value === "remote") {
+                  setRouting(value);
+                }
+              }}
+              value={endpoint.routing}
+            >
+              <Tabs.List className="flex gap-x-1">
+                <Tabs.Item label="Local" state="warning" value="local" />
+                <Tabs.Item label="Remote" state="warning" value="remote" />
+              </Tabs.List>
+            </Tabs.Root>
+          </Tooltip.Provider>
           <Input
             className="flex"
-            defaultValue={selectedEndpoint.defaultUrl}
+            defaultValue={endpoint.defaultUrl}
             onReset={handleUrlReset}
             onSubmit={handleUrlSubmit}
             onValueChange={handleUrlChange}
-            state={selectedInputState}
-            value={selectedUrl}
+            owner={endpoint.owner}
+            value={endpoint.url}
           />
-          {/* 
-        <div className="relative flex min-h-0 w-full shrink grow-0 rounded border border-neutral-6 bg-neutral-2 px-3 py-2">
-          <pre className="overflow-x-auto text-[12px] leading-[1.4] text-neutral-11">
-            <code>{mcpConfig}</code>
-          </pre>
-        </div> */}
+
+          <div className="relative flex min-h-0 w-full shrink grow-0 rounded border border-neutral-6 px-1.5 py-1">
+            <pre className="overflow-x-auto text-mono text-neutral-11">
+              <code>{mcpConfig}</code>
+            </pre>
+          </div>
 
           <div className="flex h-fit shrink-0 grow items-center gap-2">
             <Button onClick={handleAddToCursor}>Add to Cursor</Button>
