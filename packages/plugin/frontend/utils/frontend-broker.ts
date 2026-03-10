@@ -65,15 +65,24 @@ const on = <E extends InEvent>(
  *
  * @example
  * const { userHash } = await frontendBroker.postAndWait("getUserHash");
+ * const { online } = await frontendBroker.postAndWait("checkEndpointStatus", { url, type });
  */
 const postAndWait = <E extends keyof RequestResponseMap>(
   event: E & OutEvent,
+  data?: E extends "checkEndpointStatus"
+    ? { url: string; type: "mcp" | "websocket" }
+    : never,
   options: { timeoutMs?: number } = {}
 ): Promise<EventData<BackendToFrontend, RequestResponseMap[E] & InEvent>> => {
+  const requestData = data;
   const { timeoutMs = 5000 } = options;
+
   const correlationId = generateUUID();
   const responseEvent = (
-    { getUserHash: "userHash" } satisfies RequestResponseMap
+    {
+      getUserHash: "userHash",
+      checkEndpointStatus: "endpointStatus",
+    } satisfies RequestResponseMap
   )[event] as RequestResponseMap[E] & InEvent;
 
   return new Promise((resolve, reject) => {
@@ -100,6 +109,16 @@ const postAndWait = <E extends keyof RequestResponseMap>(
 
     if (event === "getUserHash") {
       post("getUserHash", { _correlationId: correlationId });
+    } else if (
+      event === "checkEndpointStatus" &&
+      requestData?.url &&
+      requestData?.type
+    ) {
+      post("checkEndpointStatus", {
+        url: requestData.url,
+        type: requestData.type,
+        _correlationId: correlationId,
+      });
     }
   });
 };

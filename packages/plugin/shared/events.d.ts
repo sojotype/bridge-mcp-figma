@@ -18,7 +18,16 @@ export type FrontendToBackend =
   | { event: "wsMessage"; data: string }
   | { event: "wsClosed" }
   | { event: "uiResize"; data: { height: number } }
-  | { event: "getUserHash"; data: { _correlationId: string } };
+  | { event: "getUserHash"; data: { _correlationId: string } }
+  | { event: "showConsoleHint" }
+  | {
+      event: "checkEndpointStatus";
+      data: {
+        type: "mcp" | "websocket";
+        url: string;
+        _correlationId: string;
+      };
+    };
 
 /**
  * Events sent from the backend to the plugin UI.
@@ -36,7 +45,16 @@ export type BackendToFrontend =
   | { event: "registered"; data: { userHash: string } }
   | { event: "alreadyActive" }
   | { event: "userHash"; data: { userHash: string; _correlationId?: string } }
-  | { event: "error"; data: { error: string; _correlationId?: string } };
+  | { event: "error"; data: { error: string; _correlationId?: string } }
+  | {
+      event: "endpointStatus";
+      data: {
+        _correlationId?: string;
+        checkedUrl?: string;
+        message?: string;
+        status: "online" | "warning" | "offline";
+      };
+    };
 
 /**
  * Extracts the `data` type for a specific event from a union.
@@ -53,4 +71,5 @@ export type EventData<
  */
 export interface RequestResponseMap {
   getUserHash: "userHash";
+  checkEndpointStatus: "endpointStatus";
 }
