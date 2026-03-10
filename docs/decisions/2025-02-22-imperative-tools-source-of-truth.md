@@ -1,4 +1,4 @@
-# ADR: Source of truth for utilitarian tools and methods
+# ADR: Source of truth for imperative tools and methods
 
 **Status:** Accepted  
 **Date:** 2025-02-22
@@ -6,9 +6,9 @@
 ## Context
 
 - MCP server exposes tools; plugin executes them via WebSocket (Partykit).
-- Utilitarian tools = thin wrappers over Figma Plugin API (one tool ≈ one API method).
+- Imperative tools = thin wrappers over Figma Plugin API (one tool ≈ one API method).
 - Need a single source of truth for: (1) which methods are exposed, (2) their names, descriptions, (3) input parameters (for MCP schema and plugin dispatch).
-- Declarative tools stay in plugin/MCP separately; this ADR is only about **utilitarian** layer.
+- Declarative tools stay in plugin/MCP separately; this ADR is only about **imperative** layer.
 
 ## Decision
 
@@ -41,7 +41,7 @@ export type ToolsParams = {
 // ToolsParams['createVariable'] == { name: string; collectionId: string; resolvedType: ... }
 ```
 
-- **One place** defines shape and validation for each tool’s input.
+- **One place** defines shape and validation for each tool's input.
 - **Types** come from schemas; no separate param type definitions.
 
 ### 2. MCP tool definitions (`mcp-tools.ts`)
@@ -97,7 +97,7 @@ function handleMessage<K extends keyof ToolsParams>(
 
 ## Benefits
 
-| Goal | How it’s achieved |
+| Goal | How it's achieved |
 |------|-------------------|
 | Single source of truth | `TOOLS_SCHEMAS` only; types from `z.infer` |
 | No param drift | MCP uses same schemas for validation; plugin uses same types for dispatch |
@@ -130,4 +130,4 @@ packages/api/   (or tools-api)
 - **MCP:** `TOOLS` object with `satisfies Record<keyof typeof TOOLS_SCHEMAS, ...>` so every schema has a tool.
 - **Plugin:** Handler typed as `(method: K, params: ToolsParams[K])`; new tools require new branches.
 
-This keeps utilitarian tools consistent across MCP and plugin with a single schema layer and type-driven exhaustiveness.
+This keeps imperative tools consistent across MCP and plugin with a single schema layer and type-driven exhaustiveness.

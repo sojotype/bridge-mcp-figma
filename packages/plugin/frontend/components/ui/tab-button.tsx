@@ -1,4 +1,4 @@
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 import { Icon, type IconName } from "./icon";
 import { Tooltip } from "./tooltip";
 

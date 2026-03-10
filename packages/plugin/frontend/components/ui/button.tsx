@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 import { Icon, type IconName } from "./icon";
 
 type ButtonVariant = "solid" | "alpha";

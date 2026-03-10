@@ -1,7 +1,7 @@
 import { Checkbox as C } from "@base-ui/react/checkbox";
 import type { ComponentPropsWithoutRef } from "react";
 import { useId } from "react";
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 import { Icon } from "./icon";
 
 const root = tv({

@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useSnapshot } from "valtio";
+import { frontendBroker } from "../lib/frontend-broker";
 import {
   type EndpointStatus,
   type EndpointType,
   endpointsStore,
   REMOTE_STATUS_CACHE_MS,
 } from "../stores/endpoints";
-import { frontendBroker } from "../utils/frontend-broker";
 import { getNormalizedUrl, useValidUrl } from "./use-valid-url";
 
 interface StatusResult {

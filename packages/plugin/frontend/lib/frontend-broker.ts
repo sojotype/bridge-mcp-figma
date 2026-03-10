@@ -7,8 +7,8 @@ import type {
   EventData,
   FrontendToBackend,
   RequestResponseMap,
-} from "../../shared/events";
-import { generateUUID } from "../../shared/uuid";
+} from "../../lib/events";
+import { generateUUID } from "../../lib/uuid";
 
 type OutEvent = FrontendToBackend["event"];
 type InEvent = BackendToFrontend["event"];

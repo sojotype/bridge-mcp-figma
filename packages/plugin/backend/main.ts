@@ -1,12 +1,17 @@
 import type { ToolsParams } from "@bridge-mcp-figma/api";
-import { PLUGIN_WIDTH } from "backend/const";
-import { obfuscateId } from "shared/obfuscated";
-import { handleMessage } from "./handlers/utilitarian";
+import { obfuscateId } from "../lib/obfuscated";
+import { PLUGIN_WIDTH } from "./const";
+import { handleMessage } from "./handlers/imperative";
 import { backendBroker } from "./utils/backend-broker";
 import { getSessionId } from "./utils/get-session-id";
 import { resizeUi } from "./utils/resize-ui";
 
 const REGISTER_RETRY_MS = 30_000;
+
+const RE_HTTP_PROTOCOL = /^https?:\/\//i;
+const RE_WS_TO_HTTP = /^ws/;
+const RE_TRAILING_SLASH = /\/$/;
+const RE_ORIGIN = /^(https?:\/\/[^/]+)/;
 
 interface CommandMessage {
   args: unknown;
@@ -75,6 +80,124 @@ function handleReady(sessionId: string): void {
     host: __WEBSOCKET_LOCAL_URL__,
     room: sessionId,
   });
+}
+
+function getStatusFetchUrl(url: string, type: "mcp" | "websocket"): string {
+  const trimmed = url.trim();
+  if (!trimmed) {
+    return "";
+  }
+  let normalized = trimmed;
+  if (!RE_HTTP_PROTOCOL.test(trimmed)) {
+    normalized =
+      trimmed.startsWith("wss://") || trimmed.startsWith("ws://")
+        ? trimmed.replace(RE_WS_TO_HTTP, "http")
+        : `http://${trimmed}`;
+  }
+  const base = normalized.replace(RE_TRAILING_SLASH, "");
+  if (type === "mcp") {
+    return `${base}/status`;
+  }
+  const originMatch = base.match(RE_ORIGIN);
+  const origin = originMatch ? originMatch[1] : base;
+  return `${origin}/health`;
+}
+
+const STATUS_TIMEOUT_MS = 7000;
+
+async function handleCheckEndpointStatus(data: {
+  url: string;
+  type: "mcp" | "websocket";
+  _correlationId?: string;
+}): Promise<void> {
+  const { url, type, _correlationId } = data;
+  const fetchUrl = getStatusFetchUrl(url, type);
+  if (!fetchUrl) {
+    console.warn("[C2F:BACKEND]", type, "offline", "Cannot reach server", url);
+    backendBroker.post("endpointStatus", {
+      status: "offline",
+      message: "Cannot reach server",
+      checkedUrl: fetchUrl || url,
+      _correlationId,
+    });
+    return;
+  }
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      const err = new Error("Server is not responding");
+      err.name = "TimeoutError";
+      reject(err);
+    }, STATUS_TIMEOUT_MS);
+  });
+
+  try {
+    const res = await Promise.race([
+      fetch(fetchUrl, { method: "GET" }),
+      timeoutPromise,
+    ]);
+
+    let body: { ok?: boolean; message?: string } | null = null;
+    const ct = res?.headers?.get?.("content-type");
+    if (ct?.includes("application/json")) {
+      try {
+        body = (await res.json()) as { ok?: boolean; message?: string };
+      } catch {
+        /* ignore */
+      }
+    }
+
+    if (res?.ok) {
+      if (body?.ok === true) {
+        backendBroker.post("endpointStatus", {
+          status: "online",
+          checkedUrl: fetchUrl,
+          _correlationId,
+        });
+      } else {
+        const msg = body?.message ?? "Server reported a problem";
+        console.warn(
+          `[C2F:BACKEND] ${type.toUpperCase()} status check: server returned a problem. URL: ${fetchUrl}. Message: ${msg}. Open plugin console (Cmd+Option+I / Ctrl+Alt+I) for details.`
+        );
+        backendBroker.post("endpointStatus", {
+          status: "warning",
+          message: msg,
+          checkedUrl: fetchUrl,
+          _correlationId,
+        });
+      }
+    } else {
+      const message =
+        body?.message ??
+        (res?.status === 503
+          ? "Service temporarily unavailable (503)"
+          : `Server returned HTTP ${res?.status ?? "?"}`);
+      console.warn(
+        `[C2F:BACKEND] ${type.toUpperCase()} status check: server returned a problem. URL: ${fetchUrl}. Message: ${message}. Open plugin console (Cmd+Option+I / Ctrl+Alt+I) for details.`
+      );
+      backendBroker.post("endpointStatus", {
+        status: "warning",
+        message,
+        checkedUrl: fetchUrl,
+        _correlationId,
+      });
+    }
+  } catch (err) {
+    const isTimeout = err instanceof Error && err.name === "TimeoutError";
+    const message = isTimeout
+      ? "Server is not responding"
+      : "Cannot reach server";
+    console.error(
+      `[C2F:BACKEND] ${type.toUpperCase()} status check failed (offline). URL: ${fetchUrl}. ${message}. Error:`,
+      err
+    );
+    backendBroker.post("endpointStatus", {
+      status: "offline",
+      message,
+      checkedUrl: fetchUrl,
+      _correlationId,
+    });
+  }
 }
 
 function handleGetUserHash(data: { _correlationId?: string }): string | null {
@@ -238,6 +361,16 @@ async function run() {
 
   backendBroker.on("ready", () => handleReady(sessionId));
 
+  backendBroker.on("checkEndpointStatus", (data) => {
+    handleCheckEndpointStatus(
+      data as {
+        url: string;
+        type: "mcp" | "websocket";
+        _correlationId?: string;
+      }
+    );
+  });
+
   backendBroker.on("getUserHash", async (data) => {
     const hash = await handleGetUserHash(data);
     if (hash) {
@@ -274,6 +407,13 @@ async function run() {
   });
 
   backendBroker.on("uiResize", (data) => handleUiResize(data));
+
+  backendBroker.on("showConsoleHint", () => {
+    figma.notify(
+      "Press Cmd+Option+I (Mac) or Ctrl+Alt+I (Win) to open the console.",
+      { error: true }
+    );
+  });
 
   figma.showUI(__html__, {
     width: PLUGIN_WIDTH,

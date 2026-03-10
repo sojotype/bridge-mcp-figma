@@ -1,4 +1,4 @@
-import { generateUUID } from "shared/uuid";
+import { generateUUID } from "../../lib/uuid";
 
 const STORAGE_PREFIX = "session_";
 

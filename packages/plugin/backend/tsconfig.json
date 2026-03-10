@@ -4,10 +4,8 @@
     "target": "es2020",
     "esModuleInterop": true,
     "types": ["@figma/plugin-typings", "bun"],
-    "baseUrl": "../",
-    "paths": {},
     "noEmit": true,
     "strictNullChecks": true
   },
-  "include": ["./**/*.ts", "../shared/**/*.ts", "../env.d.ts"]
+  "include": ["./**/*.ts", "../lib/**/*.ts", "../env.d.ts"]
 }

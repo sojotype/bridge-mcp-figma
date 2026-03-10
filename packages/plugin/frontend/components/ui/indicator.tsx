@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 
 const indicatorVariants = [
   "online",

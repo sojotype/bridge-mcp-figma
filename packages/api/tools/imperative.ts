@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const UTILITARIAN_SCHEMAS = {
+export const IMPERATIVE_SCHEMAS = {
   // VARIABLES
   createVariable: z.object({
     name: z.string(),

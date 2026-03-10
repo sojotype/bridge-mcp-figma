@@ -1,6 +1,7 @@
 ---
 name: contextplus-mcp
 description: Guides the agent on using the Context+ MCP server for structural code analysis, including its tools, fast-execute workflow, and strict formatting/abstraction rules. Use at the start of any coding task to map the codebase structure without reading files. Use when navigating, modifying, or understanding code — especially before editing symbols,finding usages, or exploring unfamiliar modules.
+disable-model-invocation: false
 ---
 
 # Context+ MCP

@@ -4,13 +4,13 @@ Shared package: tool schemas (Zod), derived types, and agent-only Figma Plugin A
 
 ## Role
 
-- **Single source of truth** for utilitarian tool params: `TOOLS_SCHEMAS` and `ToolsParams` in `tools/utilitarian.ts`. MCP server and plugin depend on this package (see [ADR](../decisions/2025-02-22-utilitarian-tools-source-of-truth.md)).
+- **Single source of truth** for imperative tool params: `IMPERATIVE_SCHEMAS` and `ToolsParams` in `tools/`. MCP server and plugin depend on this package; both use `satisfies` to stay type-safe. See [architecture § Tool layers](../architecture.md#tool-layers) for the three-layer model (api schemas → mcp-server registration → plugin handlers).
 - **Declarative tools**: placeholders / exports in `tools/declarative.ts`.
 - **Figma types for agents**: generated comment-free copy of `@figma/plugin-typings` so agents can save tokens without loading full JSDoc.
 
 ## Exports
 
-Single entry: `@bridge-mcp-figma/api`. All exports (e.g. `DECLARATIVE_SCHEMAS`, `UTILITARIAN_SCHEMAS`, `ToolsParams`) come from this one path; no subpaths.
+Single entry: `@bridge-mcp-figma/api`. All exports (e.g. `DECLARATIVE_SCHEMAS`, `IMPERATIVE_SCHEMAS`, `ToolsParams`) come from this one path; no subpaths.
 
 ## Agent-only Figma types
 
@@ -21,4 +21,4 @@ Single entry: `@bridge-mcp-figma/api`. All exports (e.g. `DECLARATIVE_SCHEMAS`, 
 ## Links
 
 - Consumed by: [mcp-server](mcp-server.md) (tool schemas), [plugin](plugin.md) (dispatch/handlers).
-- Tool design: [2025-02-22-utilitarian-tools-source-of-truth](../decisions/2025-02-22-utilitarian-tools-source-of-truth.md).
+- Tool design: [2025-02-22-imperative-tools-source-of-truth](../decisions/2025-02-22-imperative-tools-source-of-truth.md).

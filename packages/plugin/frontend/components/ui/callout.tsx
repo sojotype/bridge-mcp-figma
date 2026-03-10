@@ -8,7 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 import { Icon, type IconName } from "./icon";
 
 type CalloutTone = "neutral" | "error" | "warning";

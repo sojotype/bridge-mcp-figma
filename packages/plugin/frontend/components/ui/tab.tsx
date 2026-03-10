@@ -1,5 +1,5 @@
 import { Tabs as BaseTabs } from "@base-ui/react/tabs";
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 import { Button } from "./button";
 import { Indicator } from "./indicator";
 import { Tooltip } from "./tooltip";

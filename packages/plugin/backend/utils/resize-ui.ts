@@ -1,4 +1,4 @@
-import { PLUGIN_WIDTH } from "backend/const";
+import { PLUGIN_WIDTH } from "../const";
 
 export function resizeUi(height: number): void {
   const rounded = Math.round(height);

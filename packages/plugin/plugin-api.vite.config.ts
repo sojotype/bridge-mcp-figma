@@ -23,12 +23,6 @@ export default defineConfig(({ mode }) => {
       __WEBSOCKET_REMOTE_URL__: JSON.stringify(websocketRemoteUrl),
       __USER_HASH_SALT__: JSON.stringify(userHashSalt),
     },
-    resolve: {
-      alias: {
-        backend: resolve(pluginRoot, "backend"),
-        shared: resolve(pluginRoot, "shared"),
-      },
-    },
     build: {
       emptyOutDir: true,
       outDir: "../../dist/plugin",

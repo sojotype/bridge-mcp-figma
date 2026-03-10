@@ -1,5 +1,5 @@
 import type { AnchorHTMLAttributes, ReactNode } from "react";
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 import { Icon } from "./icon";
 
 type LinkTone = "primary" | "success";

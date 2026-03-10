@@ -12,7 +12,7 @@ Read this first. Use it to choose which docs to open.
 | [architecture.md](architecture.md) | High-level flow: Cursor → MCP → bridge → plugin → Figma API. |
 | [packages/](packages/) | One file per package: [api](packages/api.md), [plugin](packages/plugin.md), [mcp-server](packages/mcp-server.md), [websocket](packages/websocket.md). |
 | [decisions/](decisions/) | ADRs: significant architectural choices. |
-| [glossary.md](glossary.md) | Terms: MCP, bridge, session, utilitarian vs declarative tools. |
+| [glossary.md](glossary.md) | Terms: MCP, bridge, session, imperative vs declarative tools. |
 | **Plugin UI design tokens** | [packages/plugin/frontend/TOKENS.md](../packages/plugin/frontend/TOKENS.md) — CSS variables (colors, typography). Use when choosing design system variables for plugin UI. |
 
 ---
@@ -21,7 +21,7 @@ Read this first. Use it to choose which docs to open.
 
 - **Understanding the system** → architecture.md, then packages/*.md.
 - **Adding or changing a package** → project.md, architecture.md, packages/\<name\>.md.
-- **Tool/MCP design (utilitarian vs declarative)** → decisions/2025-02-22-utilitarian-tools-source-of-truth.md, architecture.md, packages/api.md.
+- **Tool/MCP design (imperative vs declarative)** → decisions/2025-02-22-imperative-tools-source-of-truth.md, architecture.md, packages/api.md.
 - **Figma Plugin API types for agents / generating plugin-api.agent.d.ts** → packages/api.md.
 - **Bridge or WebSocket protocol** → packages/websocket.md, architecture.md.
 - **Figma plugin behaviour** → packages/plugin.md.

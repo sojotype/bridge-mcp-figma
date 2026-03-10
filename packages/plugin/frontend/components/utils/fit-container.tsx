@@ -1,5 +1,5 @@
 import { type PropsWithChildren, useCallback, useEffect, useRef } from "react";
-import { frontendBroker } from "../../utils/frontend-broker";
+import { frontendBroker } from "../../lib/frontend-broker";
 
 interface FitContainerProps extends PropsWithChildren {
   className?: string;

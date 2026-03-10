@@ -1,6 +1,6 @@
 import { Tooltip as T } from "@base-ui/react/tooltip";
 import type { ReactElement, ReactNode } from "react";
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 
 interface TooltipProps {
   content: ReactNode;

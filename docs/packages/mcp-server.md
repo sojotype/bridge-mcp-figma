@@ -32,4 +32,4 @@ Next.js app that exposes MCP tools. When a tool is invoked, it forwards the call
 
 - Calls PartyKit HTTP API; plugin is connected to the same PartyKit room by room ID. See [architecture](../architecture.md).
 - Session flow: [2026-02-23-figma-userid-session-flow](../decisions/2026-02-23-figma-userid-session-flow.md).
-- Tool definitions: [api](api.md), [2025-02-22-utilitarian-tools-source-of-truth](../decisions/2025-02-22-utilitarian-tools-source-of-truth.md).
+- Tool definitions: [api](api.md), [2025-02-22-imperative-tools-source-of-truth](../decisions/2025-02-22-imperative-tools-source-of-truth.md).

@@ -1,4 +1,4 @@
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 
 type ValidationMessageTone = "neutral" | "error";
 

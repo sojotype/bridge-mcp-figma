@@ -19,5 +19,5 @@ Then run `bun install` from the **monorepo root** only.
 Single entry only:
 
 ```ts
-import { DECLARATIVE_SCHEMAS, UTILITARIAN_SCHEMAS, ToolsParams } from "@bridge-mcp-figma/api";
+import { DECLARATIVE_SCHEMAS, IMPERATIVE_SCHEMAS, ToolsParams } from "@bridge-mcp-figma/api";
 ```

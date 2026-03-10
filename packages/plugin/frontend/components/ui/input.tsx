@@ -2,7 +2,7 @@ import type { Transition } from "motion/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
-import { tv } from "../../utils/tv";
+import { tv } from "../../lib/tv";
 import { Icon } from "./icon";
 
 export interface InputProps {

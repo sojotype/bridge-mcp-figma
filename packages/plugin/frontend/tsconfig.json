@@ -9,5 +9,5 @@
     "noEmit": true,
     "strictNullChecks": true
   },
-  "include": ["./**/*.ts", "./**/*.tsx", "../shared/**/*.ts", "../env.d.ts"]
+  "include": ["./**/*.ts", "./**/*.tsx", "../lib/**/*.ts", "../env.d.ts"]
 }

@@ -6,7 +6,7 @@ import type {
   BackendToFrontend,
   EventData,
   FrontendToBackend,
-} from "../../shared/events";
+} from "../../lib/events";
 
 type OutEvent = BackendToFrontend["event"];
 type InEvent = FrontendToBackend["event"];
