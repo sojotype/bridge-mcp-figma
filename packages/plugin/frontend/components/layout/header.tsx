@@ -1,4 +1,4 @@
-import { Tooltip } from "@base-ui/react";
+import { Tooltip } from "@base-ui/react/tooltip";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useSnapshot } from "valtio";

@@ -1,4 +1,5 @@
-import { ScrollArea, Tooltip } from "@base-ui/react";
+import { ScrollArea } from "@base-ui/react/scroll-area";
+import { Tooltip } from "@base-ui/react/tooltip";
 import { Activity, useEffect, useMemo, useRef, useState } from "react";
 import { useRoutingStatus } from "../../hooks/use-routing-status";
 import { useSmoothScroll } from "../../hooks/use-smooth-scroll";
