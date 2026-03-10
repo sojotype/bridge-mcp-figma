@@ -6,6 +6,7 @@ type SessionStatus = "disconnected" | "connecting" | "connected";
 interface SessionState {
   status: SessionStatus;
   sessionId: string | null;
+  sessionsCount: number;
   userHash: string | null;
   error: string | null;
   alreadyActive: boolean;
@@ -14,6 +15,7 @@ interface SessionState {
 export const sessionStore = proxy<SessionState>({
   status: "disconnected",
   sessionId: null,
+  sessionsCount: 0,
   userHash: null,
   error: null,
   alreadyActive: false,
@@ -28,12 +30,14 @@ function ensureSessionListener() {
   isListening = true;
 
   frontendBroker.on("connected", (data) => {
-    const { sessionId, userHash } = (data ?? {}) as {
+    const { sessionId, userHash, sessionsCount } = (data ?? {}) as {
       sessionId?: string;
       userHash?: string;
+      sessionsCount?: number;
     };
     sessionStore.status = "connected";
     sessionStore.sessionId = sessionId ?? null;
+    sessionStore.sessionsCount = sessionsCount ?? 1;
     sessionStore.userHash = userHash ?? null;
     sessionStore.error = null;
     sessionStore.alreadyActive = false;
@@ -42,6 +46,7 @@ function ensureSessionListener() {
   frontendBroker.on("disconnected", () => {
     sessionStore.status = "disconnected";
     sessionStore.sessionId = null;
+    sessionStore.sessionsCount = 0;
     sessionStore.userHash = null;
   });
 

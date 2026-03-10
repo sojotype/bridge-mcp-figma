@@ -114,6 +114,10 @@ const titleText = tv({
       error: "text-error-12",
       warning: "text-warning-12",
     },
+    isCollapsed: {
+      true: "text-neutral-11",
+      false: "",
+    },
   },
   defaultVariants: {
     tone: "neutral",
@@ -127,9 +131,9 @@ const body = tv({
   ],
   variants: {
     tone: {
-      neutral: "[&_p]:text-neutral-12/70",
-      error: "[&_p]:text-error-12/70",
-      warning: "[&_p]:text-warning-12/70",
+      neutral: "[&_p]:text-neutral-12/80",
+      error: "[&_p]:text-error-12/80",
+      warning: "[&_p]:text-warning-12/80",
     },
   },
   defaultVariants: {
@@ -269,7 +273,7 @@ export const Callout = ({
           <Icon className="size-4" name={iconName as IconName} />
         </span>
       )}
-      <p className={titleText({ tone })}>{title}</p>
+      <p className={titleText({ tone, isCollapsed })}>{title}</p>
       {collapsible && (
         <span
           aria-hidden

@@ -19,6 +19,8 @@ export default function Header({ route }: HeaderProps) {
   const isTargetRoute = route === ROUTES.ROOT || route === ROUTES.WEBSOCKET;
   const { status } = useSession();
   const snap = useSnapshot(endpointsStore);
+  const selectedWsStatus = snap.websocket.status[snap.websocket.routing];
+  const isWsActive = selectedWsStatus === "online";
   const showRemoteCallout =
     snap.mcp.status.remote === "offline" ||
     snap.mcp.status.remote === "warning" ||
@@ -54,7 +56,7 @@ export default function Header({ route }: HeaderProps) {
             />
             <TabButton
               active={route === ROUTES.WEBSOCKET}
-              iconName="globe"
+              iconName={isWsActive ? "globe" : "globeX"}
               onClick={() => navigate(ROUTES.WEBSOCKET)}
               tooltip="WebSocket"
             />

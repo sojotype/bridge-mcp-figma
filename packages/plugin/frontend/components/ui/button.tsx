@@ -24,6 +24,7 @@ const button = tv({
     "transition-[background-color] duration-300 ease-out",
     "hover:transition-none",
     "focus-visible:ring-1 focus-visible:ring-primary-8 focus-visible:outline-none",
+    "disabled:cursor-not-allowed disabled:opacity-70",
   ].join(" "),
   variants: {
     variant: {
