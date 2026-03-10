@@ -1,5 +1,6 @@
 import { Tabs as BaseTabs } from "@base-ui/react/tabs";
 import { tv } from "../../utils/tv";
+import { Button } from "./button";
 import { Indicator } from "./indicator";
 import { Tooltip } from "./tooltip";
 
@@ -32,6 +33,9 @@ export interface TabItemProps {
   label?: string;
   value: string;
   state: "online" | "offline" | "connecting" | "idle" | "warning";
+  statusMessage?: string | null;
+  routing?: "local" | "remote";
+  onOpenConsole?: () => void;
 }
 
 const stateLabels: Record<TabItemProps["state"], string> = {
@@ -59,11 +63,45 @@ function TabsRoot({
   );
 }
 
-function TabItem({ label = "Toggle", value, state }: TabItemProps) {
-  const tooltipContent = stateLabels[state];
+function TabItem({
+  label = "Toggle",
+  value,
+  state,
+  statusMessage,
+  routing,
+  onOpenConsole,
+}: TabItemProps) {
+  const baseContent =
+    state === "warning" && statusMessage ? statusMessage : stateLabels[state];
+  const showConsoleButton = Boolean(
+    routing === "local" &&
+      (state === "warning" || state === "offline") &&
+      onOpenConsole
+  );
+
+  const tooltipContent = showConsoleButton ? (
+    <Button
+      aria-label="Open console"
+      className="h-6 rounded-[2px] bg-transparent pl-2.5 text-neutral-11 hover:bg-neutral-4"
+      iconName="console"
+      onClick={(e) => {
+        e.stopPropagation();
+        onOpenConsole?.();
+      }}
+      showIcon
+      tone="neutral"
+      variant="alpha"
+    >
+      {baseContent}
+    </Button>
+  ) : (
+    baseContent
+  );
+
+  const tooltipStyles = showConsoleButton ? "p-0.5" : "";
 
   return (
-    <Tooltip content={tooltipContent}>
+    <Tooltip className={tooltipStyles} content={tooltipContent}>
       <BaseTabs.Tab
         className={(tabState) =>
           toggle({
@@ -83,6 +121,4 @@ export const Tabs = {
   Root: TabsRoot,
   List: BaseTabs.List,
   Item: TabItem,
-  Panel: BaseTabs.Panel,
-  Indicator: BaseTabs.Indicator,
 };

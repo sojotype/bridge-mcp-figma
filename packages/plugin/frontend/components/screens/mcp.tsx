@@ -1,5 +1,8 @@
-import { Tooltip } from "@base-ui/react";
-import { Activity, useEffect, useMemo, useState } from "react";
+import { ScrollArea, Tooltip } from "@base-ui/react";
+import { Activity, useEffect, useMemo, useRef, useState } from "react";
+import { useRoutingStatus } from "../../hooks/use-routing-status";
+import { useSmoothScroll } from "../../hooks/use-smooth-scroll";
+import { getNormalizedUrl, useValidUrl } from "../../hooks/use-valid-url";
 import { ROUTES } from "../../routes";
 import { useEndpoint } from "../../stores/endpoints";
 import { copyToClipboard } from "../../utils/copy";
@@ -10,19 +13,33 @@ import { Input } from "../ui/input";
 import { Tabs } from "../ui/tab";
 
 function buildMcpConfig(baseUrl: string, userHash: string) {
-  const url = new URL(baseUrl);
-  url.searchParams.set("userHashes", userHash);
-  return JSON.stringify(
-    {
-      mcpServers: {
-        "Cursor to Figma": {
-          url: url.toString(),
+  try {
+    const url = new URL(baseUrl);
+    url.searchParams.set("userHashes", userHash);
+    return JSON.stringify(
+      {
+        mcpServers: {
+          "Cursor to Figma": {
+            url: url.toString(),
+          },
         },
       },
-    },
-    null,
-    2
-  );
+      null,
+      2
+    );
+  } catch {
+    return JSON.stringify(
+      {
+        mcpServers: {
+          "Cursor to Figma": {
+            url: "Lorem ipsum dolor sit amet...",
+          },
+        },
+      },
+      null,
+      2
+    );
+  }
 }
 
 export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
@@ -30,11 +47,22 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
     state: endpoint,
     setRouting,
     setUrl,
+    setLastSubmittedUrl,
     submitUrl,
     resetUrl,
   } = useEndpoint("mcp");
 
+  const { error, normalizedUrl } = useValidUrl(endpoint.url, endpoint.routing);
+  const {
+    localStatus,
+    remoteStatus,
+    localMessage,
+    remoteMessage,
+    checkForRouting,
+  } = useRoutingStatus("mcp");
   const [userHash, setUserHash] = useState<string | null>(null);
+  const configViewportRef = useRef<HTMLDivElement>(null);
+  useSmoothScroll(configViewportRef);
 
   useEffect(() => {
     frontendBroker.postAndWait("getUserHash").then((data) => {
@@ -44,8 +72,8 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
 
   const mcpConfig = useMemo(
     () =>
-      userHash ? buildMcpConfig(endpoint.url, userHash) : "Loading user hash…",
-    [endpoint.url, userHash]
+      userHash ? buildMcpConfig(normalizedUrl, userHash) : "Loading user hash…",
+    [normalizedUrl, userHash]
   );
 
   const handleUrlChange = (nextValue: string) => {
@@ -54,10 +82,15 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
 
   const handleUrlSubmit = (nextValue: string) => {
     submitUrl(nextValue);
+    const normalized = getNormalizedUrl(nextValue.trim(), endpoint.routing);
+    setLastSubmittedUrl(endpoint.routing, normalized || null);
+    checkForRouting(endpoint.routing);
   };
 
   const handleUrlReset = () => {
     resetUrl();
+    const normalized = getNormalizedUrl(endpoint.defaultUrl, endpoint.routing);
+    setLastSubmittedUrl(endpoint.routing, normalized || null);
   };
 
   const handleCopyConfig = () => {
@@ -84,7 +117,7 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
           Optionally, replace the default address with your own.
         </p>
 
-        <div className="flex min-h-0 w-full shrink grow-0 flex-col gap-2 overflow-hidden px-3 pt-2">
+        <div className="flex min-h-0 w-full shrink grow flex-col gap-2 overflow-hidden px-3 pt-2">
           <Tooltip.Provider delay={500} timeout={500}>
             <Tabs.Root
               onValueChange={(value: string) => {
@@ -95,14 +128,29 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
               value={endpoint.routing}
             >
               <Tabs.List className="flex gap-x-1">
-                <Tabs.Item label="Local" state="warning" value="local" />
-                <Tabs.Item label="Remote" state="warning" value="remote" />
+                <Tabs.Item
+                  label="Local"
+                  onOpenConsole={() => frontendBroker.post("showConsoleHint")}
+                  routing="local"
+                  state={localStatus ?? "idle"}
+                  statusMessage={localMessage}
+                  value="local"
+                />
+                <Tabs.Item
+                  label="Remote"
+                  routing="remote"
+                  state={remoteStatus ?? "idle"}
+                  statusMessage={remoteMessage}
+                  value="remote"
+                />
               </Tabs.List>
             </Tabs.Root>
           </Tooltip.Provider>
           <Input
             className="flex"
             defaultValue={endpoint.defaultUrl}
+            error={error}
+            onBlur={() => checkForRouting(endpoint.routing)}
             onReset={handleUrlReset}
             onSubmit={handleUrlSubmit}
             onValueChange={handleUrlChange}
@@ -110,11 +158,23 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
             value={endpoint.url}
           />
 
-          <div className="relative flex min-h-0 w-full shrink grow-0 rounded border border-neutral-6 px-1.5 py-1">
-            <pre className="overflow-x-auto text-mono text-neutral-11">
-              <code>{mcpConfig}</code>
-            </pre>
-          </div>
+          <ScrollArea.Root className="relative flex min-h-0 w-full shrink grow overflow-hidden rounded border border-neutral-6">
+            <ScrollArea.Viewport
+              className="block size-full overflow-auto px-1.5 py-1 text-mono text-neutral-11"
+              ref={configViewportRef}
+            >
+              <pre className="w-fit min-w-full">
+                <code className="w-fit">{mcpConfig}</code>
+              </pre>
+            </ScrollArea.Viewport>
+
+            <ScrollArea.Scrollbar
+              className="pointer-events-none m-1 flex h-1 shrink-0 items-center rounded opacity-0 transition-opacity data-hovering:pointer-events-auto data-hovering:opacity-100 data-hovering:delay-0 data-scrolling:pointer-events-auto data-scrolling:opacity-100 data-scrolling:duration-0"
+              orientation="horizontal"
+            >
+              <ScrollArea.Thumb className="h-full rounded bg-neutral-a-7" />
+            </ScrollArea.Scrollbar>
+          </ScrollArea.Root>
 
           <div className="flex h-fit shrink-0 grow items-center gap-2">
             <Button onClick={handleAddToCursor}>Add to Cursor</Button>

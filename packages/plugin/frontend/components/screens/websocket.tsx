@@ -1,41 +1,53 @@
+import { Tooltip } from "@base-ui/react/tooltip";
 import { Activity } from "react";
-import { useSnapshot } from "valtio";
+import { useRoutingStatus } from "../../hooks/use-routing-status";
+import { getNormalizedUrl, useValidUrl } from "../../hooks/use-valid-url";
 import { ROUTES } from "../../routes";
-import { endpointsStore } from "../../stores/endpoints";
+import { useEndpoint } from "../../stores/endpoints";
+import { frontendBroker } from "../../utils/frontend-broker";
 import { Callout } from "../ui/callout";
 import { Gradient } from "../ui/gradient";
-import { Indicator } from "../ui/indicator";
 import { Input } from "../ui/input";
+import { Tabs } from "../ui/tab";
 
 export default function WebSocketScreen({
   route,
 }: {
   route: keyof typeof ROUTES;
 }) {
-  const endpoints = useSnapshot(endpointsStore);
-  const mode = endpoints.websocket.selectedMode;
+  const {
+    state: endpoint,
+    setRouting,
+    setUrl,
+    setLastSubmittedUrl,
+    submitUrl,
+    resetUrl,
+  } = useEndpoint("websocket");
 
-  const selectedEndpoint = endpoints.websocket[mode];
-  const selectedUrl = selectedEndpoint.userUrl ?? selectedEndpoint.defaultUrl;
-  const selectedInputState =
-    selectedEndpoint.userUrl == null ? "default" : "user";
+  const { error } = useValidUrl(endpoint.url, endpoint.routing);
+  const {
+    localStatus,
+    remoteStatus,
+    localMessage,
+    remoteMessage,
+    checkForRouting,
+  } = useRoutingStatus("websocket");
 
   const handleUrlChange = (nextValue: string) => {
-    endpointsStore.websocket[mode].userUrl = nextValue;
+    setUrl(nextValue);
   };
 
   const handleUrlSubmit = (nextValue: string) => {
-    const normalizedValue = nextValue.trim();
-    const normalizedDefault = selectedEndpoint.defaultUrl.trim();
-
-    endpointsStore.websocket[mode].userUrl =
-      normalizedValue === "" || normalizedValue === normalizedDefault
-        ? null
-        : nextValue;
+    submitUrl(nextValue);
+    const normalized = getNormalizedUrl(nextValue.trim(), endpoint.routing);
+    setLastSubmittedUrl(endpoint.routing, normalized || null);
+    checkForRouting(endpoint.routing);
   };
 
   const handleUrlReset = () => {
-    endpointsStore.websocket[mode].userUrl = null;
+    resetUrl();
+    const normalized = getNormalizedUrl(endpoint.defaultUrl, endpoint.routing);
+    setLastSubmittedUrl(endpoint.routing, normalized || null);
   };
 
   return (
@@ -49,51 +61,51 @@ export default function WebSocketScreen({
           Customize WebSocket
         </Gradient>
 
-        <p className="px-3 pt-3 text-title text-neutral-11">
+        <p className="px-3 pt-3 text-title font-normal text-neutral-11">
           Choose Local or Remote to configure your connection. Override the
           default address to use your own server.
         </p>
 
         <div className="flex flex-col gap-2 px-3 pt-2">
-          <div className="flex items-center gap-2">
-            <button
-              className={`flex h-6 items-center gap-1 overflow-hidden rounded px-2 text-body font-medium transition-[background-color,box-shadow,color] duration-300 ease-out ${
-                mode === "local"
-                  ? "bg-neutral-1 text-neutral-12 shadow-[inset_0_0_0_1px_var(--color-neutral-a-5)]"
-                  : "bg-neutral-4 text-neutral-11 shadow-[inset_0_0_0_1px_var(--color-neutral-a-3)]"
-              }`}
-              onClick={() => {
-                endpointsStore.websocket.selectedMode = "local";
+          <Tooltip.Provider delay={500} timeout={500}>
+            <Tabs.Root
+              onValueChange={(value: string) => {
+                if (value === "local" || value === "remote") {
+                  setRouting(value);
+                }
               }}
-              type="button"
+              value={endpoint.routing}
             >
-              <span>Local</span>
-              <Indicator variant={mode === "local" ? "connecting" : "online"} />
-            </button>
-            <button
-              className={`flex h-6 items-center gap-1 overflow-hidden rounded px-2 text-body font-medium transition-[background-color,box-shadow,color] duration-300 ease-out ${
-                mode === "remote"
-                  ? "bg-neutral-1 text-neutral-12 shadow-[inset_0_0_0_1px_var(--color-neutral-a-5)]"
-                  : "bg-neutral-4 text-neutral-11 shadow-[inset_0_0_0_1px_var(--color-neutral-a-3)]"
-              }`}
-              onClick={() => {
-                endpointsStore.websocket.selectedMode = "remote";
-              }}
-              type="button"
-            >
-              <span>Remote</span>
-              <Indicator variant="offline" />
-            </button>
-          </div>
+              <Tabs.List className="flex gap-x-1">
+                <Tabs.Item
+                  label="Local"
+                  onOpenConsole={() => frontendBroker.post("showConsoleHint")}
+                  routing="local"
+                  state={localStatus ?? "idle"}
+                  statusMessage={localMessage}
+                  value="local"
+                />
+                <Tabs.Item
+                  label="Remote"
+                  routing="remote"
+                  state={remoteStatus ?? "idle"}
+                  statusMessage={remoteMessage}
+                  value="remote"
+                />
+              </Tabs.List>
+            </Tabs.Root>
+          </Tooltip.Provider>
 
           <Input
             className="w-full"
-            defaultValue={selectedEndpoint.defaultUrl}
+            defaultValue={endpoint.defaultUrl}
+            error={error}
+            onBlur={() => checkForRouting(endpoint.routing)}
             onReset={handleUrlReset}
             onSubmit={handleUrlSubmit}
             onValueChange={handleUrlChange}
-            state={selectedInputState}
-            value={selectedUrl}
+            owner={endpoint.owner}
+            value={endpoint.url}
           />
 
           <Callout title=" " tone="error">

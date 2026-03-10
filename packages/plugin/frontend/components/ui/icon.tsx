@@ -365,6 +365,29 @@ const ExternalLink = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const Console = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    aria-label={props["aria-label"] ?? "Console"}
+    fill="currentColor"
+    height={16}
+    viewBox="0 0 16 16"
+    width={16}
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path
+      d="M13 11H7v-1h6v1ZM7.281 8l-3.46 2.884-.641-.768L5.719 8l-2.54-2.116.641-.768L7.281 8Z"
+      fill="currentColor"
+    />
+    <path
+      clipRule="evenodd"
+      d="M14.102 2.005A1 1 0 0 1 15 3v10a1 1 0 0 1-.898.995L14 14H2a1 1 0 0 1-.995-.898L1 13V3a1 1 0 0 1 1-1h12l.102.005ZM2 13h12V3H2v10Z"
+      fill="currentColor"
+      fillRule="evenodd"
+    />
+  </svg>
+);
+
 const iconMap = {
   plugsDisconnected: PlugsDisconnected,
   plugsConnected: PlugsConnected,
@@ -387,4 +410,5 @@ const iconMap = {
   plus: Plus,
   minus: Minus,
   externalLink: ExternalLink,
+  console: Console,
 } as const;

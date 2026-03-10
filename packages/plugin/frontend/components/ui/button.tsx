@@ -12,6 +12,7 @@ export interface ButtonProps
   tone?: ButtonTone;
   iconName?: IconName;
   showIcon?: boolean;
+  showLabel?: boolean;
   children?: ReactNode;
   className?: string;
 }
@@ -35,9 +36,9 @@ const button = tv({
       success: "",
       error: "",
     },
-    showIcon: {
-      true: "size-7",
-      false: "",
+    showLabel: {
+      true: "",
+      false: "size-7",
     },
   },
   compoundVariants: [
@@ -112,7 +113,7 @@ export const Button = ({
 
   return (
     <button
-      className={button({ variant, tone, className, showIcon })}
+      className={button({ variant, tone, showLabel, className })}
       {...props}
     >
       {showIcon && (

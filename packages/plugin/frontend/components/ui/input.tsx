@@ -10,6 +10,8 @@ export interface InputProps {
   value: string;
   owner: "user" | "default";
   defaultValue?: string;
+  error?: string | null;
+  onBlur?: () => void;
   onValueChange?: (value: string) => void;
   onSubmit?: (value: string) => void;
   onReset?: () => void;
@@ -196,23 +198,12 @@ function InputState({
   );
 }
 
-function isValidUrl(value: string) {
-  if (value.trim() === "") {
-    return true;
-  }
-
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
 export const Input = ({
   value,
   owner,
   defaultValue = "",
+  error: errorProp,
+  onBlur,
   onValueChange,
   onSubmit,
   onReset,
@@ -224,14 +215,12 @@ export const Input = ({
 
   const [draft, setDraft] = useState(value);
   const [committedValue, setCommittedValue] = useState(value);
-  const [error, setError] = useState<string | null>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isButtonFocused, setIsButtonFocused] = useState(false);
   const isMirroringLocalChangeRef = useRef(false);
 
   useEffect(() => {
     setDraft(value);
-    setError(null);
 
     if (isMirroringLocalChangeRef.current) {
       isMirroringLocalChangeRef.current = false;
@@ -247,29 +236,16 @@ export const Input = ({
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const next = event.target.value;
     setDraft(next);
-    if (error) {
-      setError(null);
-    }
     isMirroringLocalChangeRef.current = true;
     onValueChange?.(next);
   };
 
   const trySubmit = (nextValue = draft) => {
     if (nextValue === committedValue) {
-      if (!isValidUrl(nextValue)) {
-        setError("Enter a valid URL");
-      }
       return;
     }
     setDraft(nextValue);
     setCommittedValue(nextValue);
-
-    if (!isValidUrl(nextValue)) {
-      setError("Enter a valid URL");
-      return;
-    }
-
-    setError(null);
     onSubmit?.(nextValue);
   };
 
@@ -282,6 +258,7 @@ export const Input = ({
 
   const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
     trySubmit(event.currentTarget.value);
+    onBlur?.();
   };
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
@@ -297,11 +274,13 @@ export const Input = ({
 
   const showEnterKey = isDirty;
 
+  const hasError = !!errorProp;
+
   return (
     <div className={twMerge(root({}), className)}>
-      <label className={field({ hasError: !!error })} htmlFor={inputId}>
+      <label className={field({ hasError })} htmlFor={inputId}>
         <input
-          aria-invalid={error ? true : undefined}
+          aria-invalid={hasError ? true : undefined}
           className={inputStyles}
           id={inputId}
           onBlur={handleBlur}
@@ -322,7 +301,7 @@ export const Input = ({
         <motion.button
           className={twMerge([
             buttonStyles({
-              hasError: !!error,
+              hasError,
               variant: isButtonInteractive ? "user" : "default",
               interactive: isButtonInteractive,
             }),
