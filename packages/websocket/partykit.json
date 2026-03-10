@@ -3,6 +3,7 @@
   "name": "websocket",
   "main": "src/server.ts",
   "parties": {
+    "health": "src/health.ts",
     "registry": "src/registry.ts",
     "websocket": "src/server.ts"
   },

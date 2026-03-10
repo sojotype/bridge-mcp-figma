@@ -31,6 +31,12 @@ interface McpRequest {
   tool: string;
 }
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "*",
+};
+
 export default class FigmaBridge implements Party.Server {
   // Stores resolve/reject for each pending command
   pending = new Map<
@@ -46,6 +52,25 @@ export default class FigmaBridge implements Party.Server {
 
   constructor(room: Party.Room) {
     this.room = room;
+  }
+
+  /** Health check for Figma plugin (avoids CORS issues vs /parties/health/status) */
+  static async onFetch(req: Party.Request): Promise<Response> {
+    const url = new URL(req.url);
+    await Promise.resolve(); // satisfy linter: async needs await
+    const path = url.pathname || "/";
+    if (path === "/health" || path.endsWith("/health")) {
+      const headers = new Headers(CORS_HEADERS);
+      headers.set("Content-Type", "application/json");
+      if (req.method === "OPTIONS") {
+        return new Response(null, { status: 204, headers });
+      }
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers,
+      });
+    }
+    return new Response("Not found", { status: 404 });
   }
 
   // Figma plugin connects via WebSocket
