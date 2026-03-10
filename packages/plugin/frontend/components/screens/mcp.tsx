@@ -56,6 +56,8 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
   const {
     localStatus,
     remoteStatus,
+    isCheckingLocal,
+    isCheckingRemote,
     localMessage,
     remoteMessage,
     checkForRouting,
@@ -103,7 +105,7 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
 
   return (
     <Activity mode={route === ROUTES.ROOT ? "visible" : "hidden"}>
-      <section className="relative flex h-fit w-full shrink-0 grow flex-col pt-4">
+      <section className="relative mt-4 flex h-fit w-full shrink-0 grow flex-col">
         <Gradient
           className="flex h-9 items-center px-3 text-title font-medium text-neutral-12"
           direction="horizontal"
@@ -132,14 +134,18 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
                   label="Local"
                   onOpenConsole={() => frontendBroker.post("showConsoleHint")}
                   routing="local"
-                  state={localStatus ?? "idle"}
+                  state={
+                    isCheckingLocal ? "connecting" : (localStatus ?? "idle")
+                  }
                   statusMessage={localMessage}
                   value="local"
                 />
                 <Tabs.Item
                   label="Remote"
                   routing="remote"
-                  state={remoteStatus ?? "idle"}
+                  state={
+                    isCheckingRemote ? "connecting" : (remoteStatus ?? "idle")
+                  }
                   statusMessage={remoteMessage}
                   value="remote"
                 />

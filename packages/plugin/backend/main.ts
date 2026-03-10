@@ -138,13 +138,10 @@ async function handleCheckEndpointStatus(data: {
     ]);
 
     let body: { ok?: boolean; message?: string } | null = null;
-    const ct = res?.headers?.get?.("content-type");
-    if (ct?.includes("application/json")) {
-      try {
-        body = (await res.json()) as { ok?: boolean; message?: string };
-      } catch {
-        /* ignore */
-      }
+    try {
+      body = (await res.json()) as { ok?: boolean; message?: string };
+    } catch {
+      /* ignore */
     }
 
     if (res?.ok) {
@@ -157,7 +154,7 @@ async function handleCheckEndpointStatus(data: {
       } else {
         const msg = body?.message ?? "Server reported a problem";
         console.warn(
-          `[C2F:BACKEND] ${type.toUpperCase()} status check: server returned a problem. URL: ${fetchUrl}. Message: ${msg}. Open plugin console (Cmd+Option+I / Ctrl+Alt+I) for details.`
+          `[C2F:BACKEND] ${type.toUpperCase()} status check: server returned a problem. URL: ${fetchUrl}. Message: ${msg}.`
         );
         backendBroker.post("endpointStatus", {
           status: "warning",
@@ -173,7 +170,7 @@ async function handleCheckEndpointStatus(data: {
           ? "Service temporarily unavailable (503)"
           : `Server returned HTTP ${res?.status ?? "?"}`);
       console.warn(
-        `[C2F:BACKEND] ${type.toUpperCase()} status check: server returned a problem. URL: ${fetchUrl}. Message: ${message}. Open plugin console (Cmd+Option+I / Ctrl+Alt+I) for details.`
+        `[C2F:BACKEND] ${type.toUpperCase()} status check: server returned a problem. URL: ${fetchUrl}. Message: ${message}.`
       );
       backendBroker.post("endpointStatus", {
         status: "warning",

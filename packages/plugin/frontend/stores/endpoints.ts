@@ -37,6 +37,11 @@ export interface EndpointsState {
       local: string | null;
       remote: string | null;
     };
+    /** Whether a status check is in progress */
+    isChecking: {
+      local: boolean;
+      remote: boolean;
+    };
   };
   websocket: {
     routing: "local" | "remote";
@@ -69,6 +74,11 @@ export interface EndpointsState {
     lastSubmittedUrl: {
       local: string | null;
       remote: string | null;
+    };
+    /** Whether a status check is in progress */
+    isChecking: {
+      local: boolean;
+      remote: boolean;
     };
   };
 }
@@ -107,6 +117,10 @@ export const endpointsStore = proxy<EndpointsState>({
       local: null,
       remote: null,
     },
+    isChecking: {
+      local: false,
+      remote: false,
+    },
   },
   websocket: {
     routing: "local",
@@ -138,6 +152,10 @@ export const endpointsStore = proxy<EndpointsState>({
     lastSubmittedUrl: {
       local: null,
       remote: null,
+    },
+    isChecking: {
+      local: false,
+      remote: false,
     },
   },
 });

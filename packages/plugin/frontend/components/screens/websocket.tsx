@@ -28,6 +28,8 @@ export default function WebSocketScreen({
   const {
     localStatus,
     remoteStatus,
+    isCheckingLocal,
+    isCheckingRemote,
     localMessage,
     remoteMessage,
     checkForRouting,
@@ -49,6 +51,10 @@ export default function WebSocketScreen({
     const normalized = getNormalizedUrl(endpoint.defaultUrl, endpoint.routing);
     setLastSubmittedUrl(endpoint.routing, normalized || null);
   };
+
+  const selectedStatus =
+    endpoint.routing === "local" ? localStatus : remoteStatus;
+  const showInactiveCallout = selectedStatus !== "online";
 
   return (
     <Activity mode={route === ROUTES.WEBSOCKET ? "visible" : "hidden"}>
@@ -81,14 +87,18 @@ export default function WebSocketScreen({
                   label="Local"
                   onOpenConsole={() => frontendBroker.post("showConsoleHint")}
                   routing="local"
-                  state={localStatus ?? "idle"}
+                  state={
+                    isCheckingLocal ? "connecting" : (localStatus ?? "idle")
+                  }
                   statusMessage={localMessage}
                   value="local"
                 />
                 <Tabs.Item
                   label="Remote"
                   routing="remote"
-                  state={remoteStatus ?? "idle"}
+                  state={
+                    isCheckingRemote ? "connecting" : (remoteStatus ?? "idle")
+                  }
                   statusMessage={remoteMessage}
                   value="remote"
                 />
@@ -108,12 +118,14 @@ export default function WebSocketScreen({
             value={endpoint.url}
           />
 
-          <Callout title=" " tone="error">
-            <p>
-              Please specify at least one active WebSocket so that the plugin
-              can connect to it.
-            </p>
-          </Callout>
+          {showInactiveCallout && (
+            <Callout title=" " tone="error">
+              <p>
+                Please specify at least one active WebSocket so that the plugin
+                can connect to it.
+              </p>
+            </Callout>
+          )}
         </div>
       </section>
     </Activity>

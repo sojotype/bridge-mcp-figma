@@ -27,7 +27,7 @@ function checkStatus(type: EndpointType, url: string): Promise<StatusResult> {
       if (result.status !== "online") {
         const checkedUrl = result.checkedUrl ?? url;
         console.warn(
-          `[C2F:FRONTEND] ${type.toUpperCase()} status: ${result.status}. URL: ${checkedUrl}. Message: ${result.message ?? "(no message)"}. Open plugin console (Cmd+Option+I / Ctrl+Alt+I) for details.`
+          `[C2F:FRONTEND] ${type.toUpperCase()} status: ${result.status}. URL: ${checkedUrl}. Message: ${result.message ?? "(no message)"}.`
         );
       }
       return result;
@@ -39,7 +39,7 @@ function checkStatus(type: EndpointType, url: string): Promise<StatusResult> {
         checkedUrl: url,
       };
       console.error(
-        `[C2F:FRONTEND] ${type.toUpperCase()} status check failed (offline). URL: ${url}. ${result.message}. Open plugin console (Cmd+Option+I / Ctrl+Alt+I) for details. Error:`,
+        `[C2F:FRONTEND] ${type.toUpperCase()} status check failed (offline). URL: ${url}. ${result.message}. Error:`,
         err
       );
       return result;
@@ -74,7 +74,7 @@ export function useRoutingStatus(type: EndpointType) {
       store.lastSubmittedUrl[routing] = submittedUrl;
 
       if (result.status === "offline") {
-        if (nextFailures >= 2) {
+        if (routing === "remote" || nextFailures >= 2) {
           store.status[routing] = "offline";
         }
       } else {
@@ -100,6 +100,7 @@ export function useRoutingStatus(type: EndpointType) {
       return;
     }
     isCheckingLocalRef.current = true;
+    store.isChecking.local = true;
     store.statusMessage.local = null;
 
     checkStatus(type, url)
@@ -108,6 +109,7 @@ export function useRoutingStatus(type: EndpointType) {
       })
       .finally(() => {
         isCheckingLocalRef.current = false;
+        store.isChecking.local = false;
       });
   }, [type, store, applyResult, getCurrentLocalUrl]);
 
@@ -128,6 +130,7 @@ export function useRoutingStatus(type: EndpointType) {
       }
 
       isCheckingRemoteRef.current = true;
+      store.isChecking.remote = true;
       store.statusMessage.remote = null;
 
       checkStatus(type, url)
@@ -137,6 +140,7 @@ export function useRoutingStatus(type: EndpointType) {
         })
         .finally(() => {
           isCheckingRemoteRef.current = false;
+          store.isChecking.remote = false;
         });
     },
     [type, store, applyResult, getCurrentRemoteUrl]
@@ -158,6 +162,9 @@ export function useRoutingStatus(type: EndpointType) {
   const isRemoteEditing =
     lastSubmittedRemote != null && remoteNormalized !== lastSubmittedRemote;
 
+  const isCheckingLocal = snap[type].isChecking.local;
+  const isCheckingRemote = snap[type].isChecking.remote;
+
   return {
     localStatus: (isLocalEditing
       ? null
@@ -165,6 +172,8 @@ export function useRoutingStatus(type: EndpointType) {
     remoteStatus: (isRemoteEditing
       ? null
       : snap[type].status.remote) as EndpointStatus,
+    isCheckingLocal,
+    isCheckingRemote,
     localMessage: snap[type].statusMessage.local,
     remoteMessage: snap[type].statusMessage.remote,
     localCheckedUrl: snap[type].checkedUrl.local,

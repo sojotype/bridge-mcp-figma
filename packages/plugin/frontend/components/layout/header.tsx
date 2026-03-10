@@ -1,7 +1,9 @@
 import { Tooltip } from "@base-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { useSnapshot } from "valtio";
 import { ROUTES } from "../../routes";
+import { endpointsStore } from "../../stores/endpoints";
 import { useSession } from "../../stores/session";
 import { Callout } from "../ui/callout";
 import { Icon } from "../ui/icon";
@@ -16,6 +18,12 @@ export default function Header({ route }: HeaderProps) {
   const navigate = useNavigate();
   const isTargetRoute = route === ROUTES.ROOT || route === ROUTES.WEBSOCKET;
   const { status } = useSession();
+  const snap = useSnapshot(endpointsStore);
+  const showRemoteCallout =
+    snap.mcp.status.remote === "offline" ||
+    snap.mcp.status.remote === "warning" ||
+    snap.websocket.status.remote === "offline" ||
+    snap.websocket.status.remote === "warning";
 
   const [isCollapsed, setIsCollapsed] = useState(!isTargetRoute);
   const prevTargetRef = useRef(isTargetRoute);
@@ -31,7 +39,7 @@ export default function Header({ route }: HeaderProps) {
 
   return (
     <header className="flex w-full flex-col">
-      <nav className="flex w-full justify-between p-3">
+      <nav className="flex w-full justify-between px-3 pt-3">
         <Tooltip.Provider delay={500} timeout={500}>
           <div className="flex items-center gap-1">
             <TabButton
@@ -79,37 +87,39 @@ export default function Header({ route }: HeaderProps) {
           </div>
         </Tooltip.Provider>
       </nav>
-      <Callout
-        className="mx-3"
-        collapsed={isCollapsed}
-        collapsible
-        iconNameOverride="warningTriangle"
-        onCollapsedChange={setIsCollapsed}
-        title="Official Remote service is not available now"
-        tone="neutral"
-      >
-        <p>
-          Run it{" "}
-          <Link
-            href="https://github.com/sojotype/bridge-mcp-figma#readme"
-            rel="noreferrer"
-            target="_blank"
-            tone="primary"
-          >
-            locally
-          </Link>{" "}
-          or{" "}
-          <Link
-            href="https://github.com/sojotype/bridge-mcp-figma#readme"
-            rel="noreferrer"
-            target="_blank"
-            tone="primary"
-          >
-            deploy
-          </Link>{" "}
-          your own service.
-        </p>
-      </Callout>
+      {showRemoteCallout && (
+        <Callout
+          className="mx-3 mt-3"
+          collapsed={isCollapsed}
+          collapsible
+          iconNameOverride="warningTriangle"
+          onCollapsedChange={setIsCollapsed}
+          title="Official Remote service is not available now"
+          tone="neutral"
+        >
+          <p>
+            Run it{" "}
+            <Link
+              href="https://github.com/sojotype/bridge-mcp-figma#readme"
+              rel="noreferrer"
+              target="_blank"
+              tone="primary"
+            >
+              locally
+            </Link>{" "}
+            or{" "}
+            <Link
+              href="https://github.com/sojotype/bridge-mcp-figma#readme"
+              rel="noreferrer"
+              target="_blank"
+              tone="primary"
+            >
+              deploy
+            </Link>{" "}
+            your own service.
+          </p>
+        </Callout>
+      )}
     </header>
   );
 }
