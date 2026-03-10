@@ -1,5 +1,7 @@
 import { proxy, useSnapshot } from "valtio";
 
+export type EndpointStatus = "online" | "warning" | "offline" | null;
+
 export interface EndpointsState {
   mcp: {
     routing: "local" | "remote";
@@ -8,6 +10,30 @@ export interface EndpointsState {
       remote: string;
     };
     user: {
+      local: string | null;
+      remote: string | null;
+    };
+    status: {
+      local: EndpointStatus;
+      remote: EndpointStatus;
+    };
+    statusMessage: {
+      local: string | null;
+      remote: string | null;
+    };
+    /** URL that was actually checked (for debugging / opening in browser) */
+    checkedUrl: {
+      local: string | null;
+      remote: string | null;
+    };
+    consecutiveFailures: {
+      local: number;
+      remote: number;
+    };
+    /** Timestamp of last remote status check (for cache) */
+    remoteStatusCheckedAt: number | null;
+    /** URL last submitted/checked per routing (for idle-when-editing UX) */
+    lastSubmittedUrl: {
       local: string | null;
       remote: string | null;
     };
@@ -22,8 +48,32 @@ export interface EndpointsState {
       local: string | null;
       remote: string | null;
     };
+    status: {
+      local: EndpointStatus;
+      remote: EndpointStatus;
+    };
+    statusMessage: {
+      local: string | null;
+      remote: string | null;
+    };
+    /** URL that was actually checked (for debugging / opening in browser) */
+    checkedUrl: {
+      local: string | null;
+      remote: string | null;
+    };
+    consecutiveFailures: {
+      local: number;
+      remote: number;
+    };
+    remoteStatusCheckedAt: number | null;
+    lastSubmittedUrl: {
+      local: string | null;
+      remote: string | null;
+    };
   };
 }
+
+const REMOTE_STATUS_CACHE_MS = 60_000;
 
 export const endpointsStore = proxy<EndpointsState>({
   mcp: {
@@ -33,6 +83,27 @@ export const endpointsStore = proxy<EndpointsState>({
       remote: __MCP_REMOTE_URL__,
     },
     user: {
+      local: null,
+      remote: null,
+    },
+    status: {
+      local: null,
+      remote: null,
+    },
+    statusMessage: {
+      local: null,
+      remote: null,
+    },
+    checkedUrl: {
+      local: null,
+      remote: null,
+    },
+    consecutiveFailures: {
+      local: 0,
+      remote: 0,
+    },
+    remoteStatusCheckedAt: null,
+    lastSubmittedUrl: {
       local: null,
       remote: null,
     },
@@ -47,10 +118,33 @@ export const endpointsStore = proxy<EndpointsState>({
       local: null,
       remote: null,
     },
+    status: {
+      local: null,
+      remote: null,
+    },
+    statusMessage: {
+      local: null,
+      remote: null,
+    },
+    checkedUrl: {
+      local: null,
+      remote: null,
+    },
+    consecutiveFailures: {
+      local: 0,
+      remote: 0,
+    },
+    remoteStatusCheckedAt: null,
+    lastSubmittedUrl: {
+      local: null,
+      remote: null,
+    },
   },
 });
 
-type EndpointType = keyof EndpointsState;
+export { REMOTE_STATUS_CACHE_MS };
+
+export type EndpointType = keyof EndpointsState;
 type EndpointRoutingType = EndpointsState["mcp"]["routing"];
 
 export function useEndpoint(type: EndpointType) {
@@ -89,6 +183,9 @@ export function useEndpoint(type: EndpointType) {
     resetUrl: () => {
       const currentRoute = endpointsStore[type].routing;
       endpointsStore[type].user[currentRoute] = null;
+    },
+    setLastSubmittedUrl: (routing: EndpointRoutingType, url: string | null) => {
+      endpointsStore[type].lastSubmittedUrl[routing] = url;
     },
   };
 }
