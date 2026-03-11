@@ -1,10 +1,6 @@
 import { Collapsible } from "@base-ui/react/collapsible";
-import {
-  type AutoLayout,
-  createLayout,
-  createScope,
-  type Scope,
-} from "animejs";
+import { type AutoLayout, createLayout } from "animejs/layout";
+import { createScope, type Scope } from "animejs/scope";
 import type { ReactNode } from "react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
