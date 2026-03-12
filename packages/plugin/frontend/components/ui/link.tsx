@@ -15,7 +15,7 @@ const link = tv({
   base: [
     "inline-flex items-center gap-1 text-body underline-offset-2",
     "transition-[color,text-decoration-color] duration-300 ease-out hover:transition-none",
-    "hover:underline",
+    "cursor-default hover:underline",
   ].join(" "),
   variants: {
     tone: {
