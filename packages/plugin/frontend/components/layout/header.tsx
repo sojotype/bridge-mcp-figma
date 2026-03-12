@@ -27,6 +27,11 @@ export default function Header({ route }: HeaderProps) {
     snap.websocket.status.remote === "offline" ||
     snap.websocket.status.remote === "warning";
 
+  const showCalloutOnScreen =
+    route === ROUTES.ROOT ||
+    route === ROUTES.WEBSOCKET ||
+    route === ROUTES.SESSION;
+
   const [isCollapsed, setIsCollapsed] = useState(!isTargetRoute);
   const prevTargetRef = useRef(isTargetRoute);
 
@@ -89,7 +94,7 @@ export default function Header({ route }: HeaderProps) {
           </div>
         </Tooltip.Provider>
       </nav>
-      {showRemoteCallout && (
+      {showRemoteCallout && showCalloutOnScreen && (
         <Callout
           className="mx-3 mt-3"
           collapsed={isCollapsed}

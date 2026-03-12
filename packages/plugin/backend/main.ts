@@ -1,9 +1,18 @@
 import type { ToolsParams } from "@bridge-mcp-figma/api";
+import type { StoredEndpoints } from "../lib/events";
 import { obfuscateId } from "../lib/obfuscated";
 import { PLUGIN_WIDTH } from "./const";
 import { handleMessage } from "./handlers/imperative";
 import { backendBroker } from "./utils/backend-broker";
-import { getSessionId } from "./utils/get-session-id";
+import {
+  getSessionId,
+  loadEndpoints,
+  loadLastScreen,
+  loadPersistSettings,
+  saveEndpoints,
+  saveLastScreen,
+  setPersistSettings,
+} from "./utils/plugin-storage";
 import { resizeUi } from "./utils/resize-ui";
 
 const REGISTER_RETRY_MS = 30_000;
@@ -71,7 +80,7 @@ async function handleCommand(
   }
 }
 
-function handleReady(sessionId: string): void {
+function handleReady(sessionId: string, userHash: string): void {
   console.log("[bridge] UI ready, sending connect", {
     host: __WEBSOCKET_LOCAL_URL__,
     room: sessionId,
@@ -79,6 +88,20 @@ function handleReady(sessionId: string): void {
   backendBroker.post("connect", {
     host: __WEBSOCKET_LOCAL_URL__,
     room: sessionId,
+  });
+  sendInitialSettings(userHash).catch(() => undefined);
+}
+
+async function sendInitialSettings(userHash: string): Promise<void> {
+  const persistSettings = await loadPersistSettings(userHash);
+  const [endpoints, lastScreen] = await Promise.all([
+    persistSettings ? loadEndpoints(userHash) : Promise.resolve(null),
+    loadLastScreen(userHash),
+  ]);
+  backendBroker.post("initialSettings", {
+    persistSettings,
+    endpoints: endpoints ?? undefined,
+    lastScreen: lastScreen ?? undefined,
   });
 }
 
@@ -328,10 +351,12 @@ function handleWsMessage(
 
 async function run() {
   const fileKey = figma.fileKey ?? "local";
-  const sessionId = await getSessionId(fileKey);
+  const user = figma.currentUser;
+  const userHash = user?.id ? obfuscateId(user.id) : "anonymous";
+  const sessionId = await getSessionId(fileKey, userHash);
 
   let registerRetryTimer: ReturnType<typeof setInterval> | null = null;
-  let lastUserHash: string | null = null;
+  let lastUserHash: string | null = userHash;
 
   const sendToSocket: SendToSocket = (data) => {
     backendBroker.post("send", data);
@@ -356,7 +381,7 @@ async function run() {
     );
   }
 
-  backendBroker.on("ready", () => handleReady(sessionId));
+  backendBroker.on("ready", () => handleReady(sessionId, userHash));
 
   backendBroker.on("checkEndpointStatus", (data) => {
     handleCheckEndpointStatus(
@@ -410,6 +435,41 @@ async function run() {
       "Press Cmd+Option+I (Mac) or Ctrl+Alt+I (Win) to open the console.",
       { error: true }
     );
+  });
+
+  backendBroker.on("setPersistSettings", async (data) => {
+    const persist = data?.persist ?? true;
+    const u = figma.currentUser;
+    const hash = u?.id ? obfuscateId(u.id) : "anonymous";
+    await setPersistSettings(hash, persist);
+  });
+
+  backendBroker.on("getPersistSettings", async (data) => {
+    const u = figma.currentUser;
+    const hash = u?.id ? obfuscateId(u.id) : "anonymous";
+    const persistSettings = await loadPersistSettings(hash);
+    backendBroker.post("persistSettings", {
+      persistSettings,
+      _correlationId: (data as { _correlationId?: string })?._correlationId,
+    });
+  });
+
+  backendBroker.on("saveEndpoints", async (data) => {
+    const u = figma.currentUser;
+    const hash = u?.id ? obfuscateId(u.id) : "anonymous";
+    if (data) {
+      await saveEndpoints(hash, data as StoredEndpoints);
+    }
+  });
+
+  backendBroker.on("saveLastScreen", async (data) => {
+    const route = (data as { route?: string })?.route;
+    if (!route || typeof route !== "string") {
+      return;
+    }
+    const u = figma.currentUser;
+    const hash = u?.id ? obfuscateId(u.id) : "anonymous";
+    await saveLastScreen(hash, route);
   });
 
   figma.showUI(__html__, {

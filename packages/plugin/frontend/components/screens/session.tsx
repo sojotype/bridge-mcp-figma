@@ -67,27 +67,14 @@ export default function SessionScreen({
     navigate(ROUTES.WEBSOCKET);
   };
 
-  const statusGradientStyles = tv({
-    base: [
-      "absolute inset-0 z-0 bg-linear-to-b from-success-5 to-neutral-4 grayscale-100",
-      "transition-[filter] duration-300 ease-out",
-    ],
-    variants: {
-      status: {
-        connected: "grayscale-0",
-        disconnected: "",
-        connecting: "",
-      },
-    },
-  });
   const gradientStyles = tv({
     base: [
-      "flex h-9 items-center px-3 text-title font-medium text-neutral-11 grayscale-100",
-      "transition-[filter,color] duration-300 ease-out",
+      "flex h-9 items-center px-3 text-title font-medium text-neutral-11",
+      "transition-[color] duration-300 ease-out",
     ],
     variants: {
       status: {
-        connected: "text-success-11 grayscale-0",
+        connected: "text-success-11",
         disconnected: "",
         connecting: "",
       },
@@ -108,7 +95,7 @@ export default function SessionScreen({
   });
 
   const linkStyles = tv({
-    base: "transition-[color,text-decoration-color] duration-300 ease-out",
+    base: "w-fit transition-[color,text-decoration-color] duration-300 ease-out",
     variants: {
       status: {
         connected: "text-success-11 hover:decoration-success-a-11",
@@ -121,11 +108,13 @@ export default function SessionScreen({
   return (
     <Activity mode={route === ROUTES.SESSION ? "visible" : "hidden"}>
       <section className="relative mt-4 flex h-fit w-full overflow-hidden">
-        <div className={statusGradientStyles({ status })} />
-        <div className="z-1 flex h-fit w-full shrink-0 grow flex-col gap-4">
+        <Gradient
+          className="flex h-fit w-full shrink-0 grow flex-col gap-4"
+          direction="bottom"
+          tone={status === "connected" ? "success" : "neutral"}
+        >
           <Gradient
             className={gradientStyles({ status })}
-            direction="horizontal"
             tone={status === "connected" ? "success" : "neutral"}
           >
             {status === "connected" ? "Connected" : "Not Connected"}
@@ -231,7 +220,7 @@ export default function SessionScreen({
               </Callout>
             )}
           </div>
-        </div>
+        </Gradient>
       </section>
     </Activity>
   );

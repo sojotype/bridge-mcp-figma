@@ -82,6 +82,7 @@ const postAndWait = <E extends keyof RequestResponseMap>(
     {
       getUserHash: "userHash",
       checkEndpointStatus: "endpointStatus",
+      getPersistSettings: "persistSettings",
     } satisfies RequestResponseMap
   )[event] as RequestResponseMap[E] & InEvent;
 
@@ -119,6 +120,8 @@ const postAndWait = <E extends keyof RequestResponseMap>(
         type: requestData.type,
         _correlationId: correlationId,
       });
+    } else if (event === "getPersistSettings") {
+      post("getPersistSettings", { _correlationId: correlationId });
     }
   });
 };

@@ -5,6 +5,17 @@
  * Request-response pairs use `_correlationId` in data to match responses to requests.
  */
 
+export interface StoredEndpoints {
+  mcp: {
+    routing: "local" | "remote";
+    user: { local: string | null; remote: string | null };
+  };
+  websocket: {
+    routing: "local" | "remote";
+    user: { local: string | null; remote: string | null };
+  };
+}
+
 /**
  * Events sent from the plugin UI (iframe) to the backend.
  * - ready: UI is mounted and ready
@@ -27,7 +38,11 @@ export type FrontendToBackend =
         url: string;
         _correlationId: string;
       };
-    };
+    }
+  | { event: "setPersistSettings"; data: { persist: boolean } }
+  | { event: "getPersistSettings"; data: { _correlationId: string } }
+  | { event: "saveEndpoints"; data: StoredEndpoints }
+  | { event: "saveLastScreen"; data: { route: string } };
 
 /**
  * Events sent from the backend to the plugin UI.
@@ -54,6 +69,18 @@ export type BackendToFrontend =
         message?: string;
         status: "online" | "warning" | "offline";
       };
+    }
+  | {
+      event: "initialSettings";
+      data: {
+        persistSettings: boolean;
+        endpoints?: StoredEndpoints;
+        lastScreen?: string;
+      };
+    }
+  | {
+      event: "persistSettings";
+      data: { persistSettings: boolean; _correlationId?: string };
     };
 
 /**
@@ -72,4 +99,5 @@ export type EventData<
 export interface RequestResponseMap {
   getUserHash: "userHash";
   checkEndpointStatus: "endpointStatus";
+  getPersistSettings: "persistSettings";
 }

@@ -61,7 +61,6 @@ export default function WebSocketScreen({
       <section className="relative flex h-fit shrink grow-0 flex-col pt-4">
         <Gradient
           className="flex h-9 items-center px-3 text-title font-medium text-neutral-12"
-          direction="horizontal"
           tone="primary"
         >
           Customize WebSocket

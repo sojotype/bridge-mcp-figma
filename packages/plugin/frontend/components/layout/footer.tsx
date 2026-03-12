@@ -5,6 +5,7 @@ import { ROUTES } from "../../routes";
 import { useEndpoint } from "../../stores/endpoints";
 import { useSession } from "../../stores/session";
 import { Button } from "../ui/button";
+import { Icon } from "../ui/icon";
 import { ValidationMessage } from "../utils/validation-message";
 
 interface FooterProps {
@@ -67,6 +68,37 @@ function WebSocketFooter() {
   );
 }
 
+const GITHUB_URL = "https://github.com/sojotype/bridge-mcp-figma";
+
+function AboutFooter() {
+  const navigate = useNavigate();
+
+  return (
+    <footer className="flex w-full items-end justify-between px-3 pt-10 pb-3">
+      <Button
+        className="rotate-180"
+        iconName="caretRight"
+        onClick={() => navigate(ROUTES.SESSION)}
+        showIcon
+      />
+      <a
+        className="inline-flex h-7 items-center gap-2 rounded-[4px] bg-success-a-4 px-3 text-body font-medium text-success-12 transition-colors hover:bg-success-a-5"
+        href={GITHUB_URL}
+        rel="noreferrer"
+        target="_blank"
+      >
+        <Icon
+          aria-hidden
+          className="size-4"
+          focusable="false"
+          name="lightning"
+        />
+        Support this project
+      </a>
+    </footer>
+  );
+}
+
 function SessionFooter() {
   const navigate = useNavigate();
   const { state: endpoint } = useEndpoint("websocket");
@@ -114,6 +146,10 @@ function SessionFooter() {
 }
 
 export default function Footer({ route }: FooterProps) {
+  if (route === ROUTES.ABOUT) {
+    return <AboutFooter />;
+  }
+
   if (
     route !== ROUTES.ROOT &&
     route !== ROUTES.WEBSOCKET &&

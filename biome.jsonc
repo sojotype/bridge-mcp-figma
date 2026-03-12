@@ -44,6 +44,7 @@
         "globals": [
           "__MCP_LOCAL_URL__",
           "__MCP_REMOTE_URL__",
+          "__PLUGIN_VERSION__",
           "__WEBSOCKET_LOCAL_URL__",
           "__WEBSOCKET_REMOTE_URL__"
         ]

@@ -109,7 +109,6 @@ export default function MCPScreen({ route }: { route: keyof typeof ROUTES }) {
       <section className="relative mt-4 flex h-fit w-full shrink-0 grow flex-col">
         <Gradient
           className="flex h-9 items-center px-3 text-title font-medium text-neutral-12"
-          direction="horizontal"
           tone="primary"
         >
           Add an MCP server to the client

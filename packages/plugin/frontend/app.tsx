@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import Footer from "./components/layout/footer";
 import Header from "./components/layout/header";
@@ -10,12 +11,16 @@ import WarningScreen from "./components/screens/warning";
 import WebSocketScreen from "./components/screens/websocket";
 import { FitContainer } from "./components/utils/fit-container";
 import { HistoryNavigator } from "./components/utils/history-navigator";
+import { RoutePersistence } from "./components/utils/route-persistence";
+import { frontendBroker } from "./lib/frontend-broker";
 import type { ROUTES } from "./routes";
+import { useSettings } from "./stores/settings";
 
 export const App = () => {
   return (
     <MemoryRouter initialEntries={["/"]}>
       <HistoryNavigator />
+      <RoutePersistence />
       <Routes>
         <Route element={<ErrorLayout error={null} />} path="/error" />
         <Route element={<WarningLayout />} path="/warning" />
@@ -35,6 +40,11 @@ function WarningLayout() {
 
 function MainLayout() {
   const route = useLocation().pathname as keyof typeof ROUTES;
+  useSettings();
+
+  useEffect(() => {
+    frontendBroker.post("ready");
+  }, []);
 
   return (
     <FitContainer className="flex h-full flex-col overflow-hidden bg-neutral-4 font-sans">
