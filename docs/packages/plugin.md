@@ -4,7 +4,7 @@ Figma plugin that runs inside Figma and talks to the bridge via WebSocket.
 
 ## Role
 
-- **Backend (main thread)**: Entry `backend/main.ts`. Does not connect automatically; waits for the user to trigger connection from the session screen. On connect, sends session metadata: **userHash** (obfuscated `figma.currentUser.id`), **file id** (fileKey), **file name**, **user name** (`figma.currentUser.name`). On WebSocket message: `dispatch(tool, args)` → Figma API or composite handler → send `{ commandId, result }` or `{ commandId, error }` back.
+- **Backend (main thread)**: Entry `backend/main.ts`. Does not connect automatically; waits for the user to trigger connection from the session screen. On connect, sends session metadata: **userHash** (obfuscated `figma.currentUser.id`), **fileRootId** (UUID in `figma.root` pluginData, key `C2F_file_UUID`), **user name** (`figma.currentUser.name`). On WebSocket message: `dispatch(tool, args)` → Figma API or composite handler → send `{ commandId, result }` or `{ commandId, error }` back.
 - **Frontend (UI iframe)**:
   - Shows connection status.
   - Shows **MCP config** for adding the server to the client (e.g. Cursor): URL with `userHashes` query param (e.g. `http://localhost:3000/mcp?userHashes=<userHash>`). User copies the config and pastes it into the MCP client. **userHash** is shown in the plugin UI after the user triggers a hash request (e.g. on the session screen).
