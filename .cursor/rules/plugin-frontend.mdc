@@ -1,0 +1,64 @@
+---
+description: Figma plugin frontend — React, Valtio, Tailwind Variants, broker pattern
+globs: ["packages/plugin/frontend/**"]
+alwaysApply: false
+---
+
+# Plugin Frontend Architecture
+
+React 19 + Valtio + Tailwind CSS 4. Runs in Figma iframe. Data from plugin backend only via broker.
+
+## Structure
+
+```
+frontend/
+├── components/
+│   ├── layout/     # header, footer
+│   ├── screens/    # mcp, websocket, session, about, mini, error, warning
+│   ├── ui/         # shared primitives (button, input, tab, etc.)
+│   └── utils/      # fit-container, history-navigator, validation-message
+├── hooks/          # use-routing-status, use-valid-url, use-smooth-scroll
+├── stores/         # Valtio stores (session, endpoints)
+└── lib/            # tv, frontend-broker, copy, ws-manager (WebSocket lifecycle)
+```
+
+Do not create `features/`, `utils/`, or `helpers/` — use existing folders. One name per responsibility.
+
+## Valtio pattern
+
+- Stores: `proxy()` in `stores/*.ts`. Subscribe to broker events, mutate store directly.
+- Components: read via `useSnapshot(store)` — never import store and mutate from components.
+- Expose a hook per store: `useSession()`, `useEndpoints()` — ensures broker listener is set up.
+
+## Broker pattern
+
+- Data from plugin backend **only** via `frontendBroker.on(event, callback)`.
+- Send to backend via `frontendBroker.post(event, data)`.
+- No direct `figma.*` or `window.parent.postMessage` in components — use the broker.
+
+## WebSocket
+
+The WebSocket to PartyKit lives in the frontend only (backend cannot create sockets). Use `lib/ws-manager.ts` to create, send, and close the connection. Components call `wsManager.close()` for disconnect — do not post disconnect events to the backend.
+
+## Styling (Tailwind Variants)
+
+- Use `tv()` from `lib/tv.ts` for component variants — not inline class concatenation.
+- Custom tokens: `text-title`, `text-body`, `text-caption`, `text-label` (from @theme).
+
+## TypeScript
+
+- `strict: true`. No `any`. Use `unknown` and narrow.
+- Props: explicit interface. Types used in 2+ files → `types.ts` in nearest scope.
+- Prefer `type` for shapes; `interface` for extensible contracts.
+
+## Naming
+
+- Components: PascalCase. Hooks: `use` prefix. Files: kebab-case.
+- Event handlers: `handle` prefix. Booleans: `is`, `has`, `can` prefix.
+
+## Rules
+
+- Handle loading, error, empty states — not just happy path.
+- Prefer declarative (`map`, `filter`, `reduce`) over imperative loops.
+- Do not add `utils/` or `helpers/` when `lib/` exists.
+- Do not use magic strings — constants or enums.
