@@ -42,7 +42,7 @@ export default function MiniScreen({ route }: MiniScreenProps) {
   const isWsActive = selectedWsStatus === "online";
 
   const handleConnect = () => {
-    frontendBroker.post("ready");
+    frontendBroker.post("requestConnect");
   };
 
   const handleDisconnect = () => {

@@ -16,8 +16,7 @@ interface CommandResult {
 
 // Plugin registration message (first message after connect)
 interface RegisterMessage {
-  fileKey: string;
-  fileName?: string;
+  fileRootId: string;
   type: "register";
   userHash: string;
   userName?: string;
@@ -54,6 +53,31 @@ export default class FigmaBridge implements Party.Server {
     this.room = room;
   }
 
+  /** Periodic cleanup of stale sessions (0 connections) in registry */
+  static async onCron(
+    _cron: Party.Cron,
+    lobby: Party.CronLobby,
+    _ctx: Party.ExecutionContext
+  ): Promise<void> {
+    const parties = lobby.parties as {
+      registry?: {
+        get: (id: string) => { fetch: (req: Request) => Promise<Response> };
+      };
+    };
+    if (!parties?.registry) {
+      return;
+    }
+    const secret = lobby.env.BRIDGE_SECRET as string;
+    const registryRoom = parties.registry.get(REGISTRY_ROOM_ID);
+    await registryRoom.fetch(
+      new Request("https://_/parties/registry/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cleanup", secret }),
+      })
+    );
+  }
+
   /** Health check for Figma plugin (avoids CORS issues vs /parties/health/status) */
   static async onFetch(req: Party.Request): Promise<Response> {
     const url = new URL(req.url);
@@ -78,9 +102,9 @@ export default class FigmaBridge implements Party.Server {
     console.error(`Plugin connected to room: ${this.room.id}`);
   }
 
-  onClose() {
+  async onClose() {
     console.error(`Plugin disconnected from room: ${this.room.id}`);
-    this.unregisterFromRegistry();
+    await this.unregisterFromRegistry();
   }
 
   private async unregisterFromRegistry(): Promise<void> {
@@ -173,9 +197,8 @@ export default class FigmaBridge implements Party.Server {
         body: JSON.stringify({
           action: "register",
           userHash: body.userHash,
-          fileKey: body.fileKey,
+          fileRootId: body.fileRootId,
           roomId: this.room.id,
-          fileName: body.fileName,
           userName: body.userName,
           secret,
         }),
@@ -195,7 +218,13 @@ export default class FigmaBridge implements Party.Server {
       );
       return;
     }
-    sender.send(JSON.stringify({ type: "registered" }));
+    const data = (await res.json()) as { sessionsCount?: number };
+    sender.send(
+      JSON.stringify({
+        type: "registered",
+        sessionsCount: data.sessionsCount ?? 1,
+      })
+    );
   }
 
   // MCP server sends a command via HTTP POST; GET returns connection count for registry
@@ -214,11 +243,43 @@ export default class FigmaBridge implements Party.Server {
       return new Response("Method not allowed", { status: 405 });
     }
 
-    const body: McpRequest = await req.json();
+    const body = (await req.json()) as {
+      action?: string;
+      secret?: string;
+      sessionsCount?: number;
+      commandId?: string;
+      tool?: string;
+      args?: unknown;
+    };
 
     // Simple protection — check the secret
     if (body.secret !== this.room.env.BRIDGE_SECRET) {
       return new Response("Unauthorized", { status: 401 });
+    }
+
+    // Registry requests: push sessionsCountUpdate to connected clients
+    if (
+      body.action === "notifyClient" &&
+      typeof body.sessionsCount === "number"
+    ) {
+      const connections = [...this.room.getConnections()];
+      const msg = JSON.stringify({
+        type: "sessionsCountUpdate",
+        sessionsCount: body.sessionsCount,
+      });
+      for (const conn of connections) {
+        conn.send(msg);
+      }
+      return Response.json({ ok: true });
+    }
+
+    // MCP command
+    const mcpBody = body as McpRequest;
+    if (!(mcpBody.commandId && mcpBody.tool)) {
+      return new Response(
+        { error: "Missing commandId or tool" },
+        { status: 400 }
+      );
     }
 
     // Check if the plugin is connected
@@ -229,9 +290,9 @@ export default class FigmaBridge implements Party.Server {
 
     // Send the command to the plugin (take the first connection)
     const command: Command = {
-      commandId: body.commandId,
-      tool: body.tool,
-      args: body.args,
+      commandId: mcpBody.commandId,
+      tool: mcpBody.tool,
+      args: mcpBody.args,
     };
     connections[0].send(JSON.stringify(command));
 
@@ -239,11 +300,11 @@ export default class FigmaBridge implements Party.Server {
     try {
       const result = await new Promise((resolve, reject) => {
         const timer = setTimeout(() => {
-          this.pending.delete(body.commandId);
+          this.pending.delete(mcpBody.commandId);
           reject("Timeout after 30s");
         }, 30_000);
 
-        this.pending.set(body.commandId, { resolve, reject, timer });
+        this.pending.set(mcpBody.commandId, { resolve, reject, timer });
       });
 
       return Response.json({ result });

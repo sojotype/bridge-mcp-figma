@@ -29,6 +29,10 @@ function ensureSessionListener() {
   }
   isListening = true;
 
+  frontendBroker.on("connecting", () => {
+    sessionStore.status = "connecting";
+  });
+
   frontendBroker.on("connected", (data) => {
     const { sessionId, userHash, sessionsCount } = (data ?? {}) as {
       sessionId?: string;
@@ -61,9 +65,15 @@ function ensureSessionListener() {
   });
 
   frontendBroker.on("registered", (data) => {
-    const { userHash } = (data ?? {}) as { userHash?: string };
+    const { userHash, sessionsCount } = (data ?? {}) as {
+      userHash?: string;
+      sessionsCount?: number;
+    };
     if (userHash) {
       sessionStore.userHash = userHash;
+    }
+    if (sessionsCount !== undefined) {
+      sessionStore.sessionsCount = sessionsCount;
     }
   });
 

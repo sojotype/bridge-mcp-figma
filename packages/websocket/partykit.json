@@ -7,5 +7,8 @@
     "registry": "src/registry.ts",
     "websocket": "src/server.ts"
   },
+  "crons": {
+    "cleanup-stale-sessions": "*/2 * * * *"
+  },
   "compatibilityDate": "2026-02-21"
 }

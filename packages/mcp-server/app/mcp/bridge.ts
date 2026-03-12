@@ -109,7 +109,7 @@ async function invokeViaRegistry(
     result?: unknown;
     error?: string;
     code?: string;
-    sessions?: Array<{ roomId: string; fileName?: string; userName?: string }>;
+    sessions?: Array<{ sessionId: string; userName?: string }>;
   };
 
   if (
@@ -117,8 +117,13 @@ async function invokeViaRegistry(
     data.code === "MULTIPLE_SESSIONS" &&
     data.sessions?.length
   ) {
+    const list = data.sessions
+      .map(
+        (s) => `${s.userName ?? "Unknown"} — ${s.sessionId} (copy from plugin)`
+      )
+      .join("; ");
     throw new Error(
-      `Multiple sessions for this user. Pass sessionId (e.g. ${data.sessions[0].roomId}) or use the desired file. Sessions: ${JSON.stringify(data.sessions)}`
+      `Multiple sessions. Choose one and pass sessionId in tool params. Sessions: ${list}`
     );
   }
   if (res.status === 503 && data.code === "NO_SESSIONS") {
@@ -137,7 +142,7 @@ async function invokeViaRegistry(
 
 /**
  * Resolves active sessions for the given user hashes (from registry).
- * Returns list of sessions; useful when you need to let the user choose.
+ * Returns list of sessions with userName and sessionId for user selection.
  */
 export async function resolveSessions(
   host: string,
@@ -145,9 +150,7 @@ export async function resolveSessions(
   secret: string
 ): Promise<
   Array<{
-    roomId: string;
-    fileKey: string;
-    fileName?: string;
+    sessionId: string;
     userName?: string;
   }>
 > {
@@ -163,10 +166,11 @@ export async function resolveSessions(
   const data = (await res.json()) as {
     sessions?: Array<{
       roomId: string;
-      fileKey: string;
-      fileName?: string;
       userName?: string;
     }>;
   };
-  return data.sessions ?? [];
+  return (data.sessions ?? []).map((s) => ({
+    sessionId: s.roomId,
+    userName: s.userName,
+  }));
 }

@@ -25,6 +25,7 @@ export interface StoredEndpoints {
  */
 export type FrontendToBackend =
   | { event: "ready" }
+  | { event: "requestConnect" }
   | { event: "wsOpened" }
   | { event: "wsMessage"; data: string }
   | { event: "wsClosed" }
@@ -54,10 +55,14 @@ export type FrontendToBackend =
  */
 export type BackendToFrontend =
   | { event: "connect"; data: { host: string; room: string } }
+  | { event: "connecting" }
   | { event: "send"; data: string }
-  | { event: "connected"; data: { sessionId: string; userHash: string } }
+  | {
+      event: "connected";
+      data: { sessionId: string; userHash: string; sessionsCount?: number };
+    }
   | { event: "disconnected" }
-  | { event: "registered"; data: { userHash: string } }
+  | { event: "registered"; data: { userHash?: string; sessionsCount?: number } }
   | { event: "alreadyActive" }
   | { event: "userHash"; data: { userHash: string; _correlationId?: string } }
   | { event: "error"; data: { error: string; _correlationId?: string } }

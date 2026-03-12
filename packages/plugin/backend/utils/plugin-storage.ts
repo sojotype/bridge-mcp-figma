@@ -3,6 +3,25 @@ import { generateUUID } from "../../lib/uuid";
 
 const STORAGE_PREFIX = "C2F_";
 
+export const FILE_UUID_PLUGIN_DATA_KEY = "C2F_file_UUID";
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(str: string): boolean {
+  return typeof str === "string" && str.length === 36 && UUID_REGEX.test(str);
+}
+
+export function getOrCreateFileId(): string {
+  const existing = figma.root.getPluginData(FILE_UUID_PLUGIN_DATA_KEY);
+  if (existing && isValidUUID(existing)) {
+    return existing;
+  }
+  const uuid = generateUUID();
+  figma.root.setPluginData(FILE_UUID_PLUGIN_DATA_KEY, uuid);
+  return uuid;
+}
+
 export interface UserPluginData {
   sessions: Record<string, string>;
   persistSettings?: boolean;
@@ -48,16 +67,16 @@ export async function saveUserData(
 }
 
 export async function getSessionId(
-  fileKey: string,
+  fileRootId: string,
   userHash: string
 ): Promise<string> {
   const data = await loadUserData(userHash);
-  const existing = data?.sessions?.[fileKey];
+  const existing = data?.sessions?.[fileRootId];
   if (existing && typeof existing === "string") {
     return existing;
   }
   const sessionId = `room_${generateUUID()}`;
-  const sessions = { ...(data?.sessions ?? {}), [fileKey]: sessionId };
+  const sessions = { ...(data?.sessions ?? {}), [fileRootId]: sessionId };
   await saveUserData(userHash, { ...data, sessions });
   return sessionId;
 }

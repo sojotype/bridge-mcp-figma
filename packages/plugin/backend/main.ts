@@ -5,6 +5,7 @@ import { PLUGIN_WIDTH } from "./const";
 import { handleMessage } from "./handlers/imperative";
 import { backendBroker } from "./utils/backend-broker";
 import {
+  getOrCreateFileId,
   getSessionId,
   loadEndpoints,
   loadLastScreen,
@@ -38,7 +39,19 @@ function handleControlMessage(
   if (msg.type === "registered") {
     return {
       clearRetry: true,
-      post: { type: "registered", userHash: lastUserHash ?? undefined },
+      post: {
+        type: "registered",
+        userHash: lastUserHash ?? undefined,
+        sessionsCount: msg.sessionsCount as number | undefined,
+      },
+    };
+  }
+  if (msg.type === "sessionsCountUpdate") {
+    return {
+      post: {
+        type: "registered",
+        sessionsCount: msg.sessionsCount as number,
+      },
     };
   }
   if (msg.type === "alreadyActive") {
@@ -80,16 +93,30 @@ async function handleCommand(
   }
 }
 
-function handleReady(sessionId: string, userHash: string): void {
-  console.log("[bridge] UI ready, sending connect", {
-    host: __WEBSOCKET_LOCAL_URL__,
-    room: sessionId,
-  });
-  backendBroker.post("connect", {
-    host: __WEBSOCKET_LOCAL_URL__,
-    room: sessionId,
-  });
+function handleReady(userHash: string): void {
   sendInitialSettings(userHash).catch(() => undefined);
+}
+
+async function handleRequestConnect(
+  sessionId: string,
+  userHash: string
+): Promise<void> {
+  const endpoints = await loadEndpoints(userHash);
+  const routing = endpoints?.websocket?.routing ?? "local";
+  const url =
+    endpoints?.websocket?.user[routing] ??
+    (routing === "local" ? __WEBSOCKET_LOCAL_URL__ : __WEBSOCKET_REMOTE_URL__);
+  const host = url.trim();
+  if (!host) {
+    backendBroker.post("error", { error: "WebSocket URL not configured" });
+    return;
+  }
+  console.log("[bridge] requestConnect, sending connect", {
+    host,
+    room: sessionId,
+  });
+  backendBroker.post("connecting");
+  backendBroker.post("connect", { host, room: sessionId });
 }
 
 async function sendInitialSettings(userHash: string): Promise<void> {
@@ -242,8 +269,8 @@ function handleGetUserHash(data: { _correlationId?: string }): string | null {
 }
 
 function handleWsOpened(
-  sessionId: string,
-  fileKey: string,
+  _sessionId: string,
+  fileRootId: string,
   sendToSocket: SendToSocket
 ): string | null {
   console.log("[bridge] WebSocket open (via UI)");
@@ -254,17 +281,12 @@ function handleWsOpened(
     return null;
   }
   const userHash = obfuscateId(user.id);
-  console.log("[bridge] posting connected to UI", {
-    sessionId,
-    userHash: `${userHash.slice(0, 8)}…`,
-  });
-  backendBroker.post("connected", { sessionId, userHash });
+  console.log("[bridge] sending register after wsOpened");
   sendToSocket(
     JSON.stringify({
       type: "register",
       userHash,
-      fileKey,
-      fileName: figma.root.name,
+      fileRootId,
       userName: user.name,
     })
   );
@@ -297,7 +319,8 @@ function handleWsMessage(
   sendToSocket: SendToSocket,
   registerRetryTimer: ReturnType<typeof setInterval> | null,
   lastUserHash: string | null,
-  sendRegister: () => void
+  sendRegister: () => void,
+  sessionId: string
 ): ReturnType<typeof setInterval> | null | undefined {
   let parsed: unknown;
   try {
@@ -308,6 +331,7 @@ function handleWsMessage(
   const msgData = parsed as { type?: string; [k: string]: unknown };
   if (
     msgData.type === "registered" ||
+    msgData.type === "sessionsCountUpdate" ||
     msgData.type === "alreadyActive" ||
     msgData.type === "error"
   ) {
@@ -332,9 +356,23 @@ function handleWsMessage(
       type: string;
       userHash?: string;
       error?: string;
+      sessionsCount?: number;
     };
     if (p.type === "registered") {
-      backendBroker.post("registered", { userHash: p.userHash ?? "" });
+      if (handled.clearRetry) {
+        // First register: send "connected" with all data including sessionsCount
+        backendBroker.post("connected", {
+          sessionId,
+          userHash: p.userHash ?? "",
+          sessionsCount: p.sessionsCount,
+        });
+      } else {
+        // sessionsCountUpdate: send "registered" only with sessionsCount
+        backendBroker.post("registered", {
+          userHash: "",
+          sessionsCount: p.sessionsCount,
+        });
+      }
     } else if (p.type === "alreadyActive") {
       backendBroker.post("alreadyActive");
     } else if (p.type === "error") {
@@ -350,10 +388,10 @@ function handleWsMessage(
 }
 
 async function run() {
-  const fileKey = figma.fileKey ?? "local";
+  const fileRootId = getOrCreateFileId();
   const user = figma.currentUser;
   const userHash = user?.id ? obfuscateId(user.id) : "anonymous";
-  const sessionId = await getSessionId(fileKey, userHash);
+  const sessionId = await getSessionId(fileRootId, userHash);
 
   let registerRetryTimer: ReturnType<typeof setInterval> | null = null;
   let lastUserHash: string | null = userHash;
@@ -374,14 +412,22 @@ async function run() {
       JSON.stringify({
         type: "register",
         userHash,
-        fileKey,
-        fileName: figma.root.name,
+        fileRootId,
         userName: user.name,
       })
     );
   }
 
-  backendBroker.on("ready", () => handleReady(sessionId, userHash));
+  backendBroker.on("ready", () => handleReady(userHash));
+
+  backendBroker.on("requestConnect", () => {
+    handleRequestConnect(sessionId, userHash).catch((err) => {
+      console.error("[bridge] requestConnect failed:", err);
+      backendBroker.post("error", {
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  });
 
   backendBroker.on("checkEndpointStatus", (data) => {
     handleCheckEndpointStatus(
@@ -401,7 +447,7 @@ async function run() {
   });
 
   backendBroker.on("wsOpened", async () => {
-    const hash = await handleWsOpened(sessionId, fileKey, sendToSocket);
+    const hash = await handleWsOpened(sessionId, fileRootId, sendToSocket);
     if (hash) {
       lastUserHash = hash;
     }
@@ -416,7 +462,8 @@ async function run() {
       sendToSocket,
       registerRetryTimer,
       lastUserHash,
-      sendRegister
+      sendRegister,
+      sessionId
     );
     if (nextTimer !== undefined) {
       registerRetryTimer = nextTimer;

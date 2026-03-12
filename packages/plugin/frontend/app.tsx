@@ -13,6 +13,7 @@ import { FitContainer } from "./components/utils/fit-container";
 import { HistoryNavigator } from "./components/utils/history-navigator";
 import { RoutePersistence } from "./components/utils/route-persistence";
 import { frontendBroker } from "./lib/frontend-broker";
+import "./lib/ws-manager";
 import type { ROUTES } from "./routes";
 import { useSettings } from "./stores/settings";
 

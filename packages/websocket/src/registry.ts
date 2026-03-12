@@ -1,8 +1,7 @@
 import type * as Party from "partykit/server";
 
 export interface SessionEntry {
-  fileKey: string;
-  fileName?: string;
+  fileRootId: string;
   registeredAt: number;
   roomId: string;
   userHash: string;
@@ -11,8 +10,7 @@ export interface SessionEntry {
 
 interface RegisterBody {
   action: "register";
-  fileKey: string;
-  fileName?: string;
+  fileRootId: string;
   roomId: string;
   secret?: string;
   userHash: string;
@@ -40,16 +38,16 @@ interface InvokeBody {
   userHashes: string[];
 }
 
-/** Storage key: userHash:fileKey -> single SessionEntry (one session per user per file) */
-const SESSIONS_BY_USER_FILE = "sessionsByUserFile";
-/** Storage key: roomId -> { userHash, fileKey } for fast unregister */
+/** Storage key: userHash:fileRootId -> single SessionEntry (one session per user per file) */
+const SESSIONS_BY_USER_ROOT = "sessionsByUserRoot";
+/** Storage key: roomId -> { userHash, fileRootId } for fast unregister */
 const SESSIONS_BY_ROOM = "sessionsByRoom";
 
-type ByUserFile = Record<string, SessionEntry>;
-type ByRoom = Record<string, { userHash: string; fileKey: string }>;
+type ByUserRoot = Record<string, SessionEntry>;
+type ByRoom = Record<string, { userHash: string; fileRootId: string }>;
 
-function userFileKey(userHash: string, fileKey: string): string {
-  return `${userHash}:${fileKey}`;
+function userRootKey(userHash: string, fileRootId: string): string {
+  return `${userHash}:${fileRootId}`;
 }
 
 export const REGISTRY_ROOM_ID = "sessions";
@@ -62,23 +60,55 @@ export default class Registry implements Party.Server {
   }
 
   private async getStored(): Promise<{
-    byUserFile: ByUserFile;
+    byUserRoot: ByUserRoot;
     byRoom: ByRoom;
   }> {
-    const byUserFile =
-      (await this.room.storage.get<ByUserFile>(SESSIONS_BY_USER_FILE)) ?? {};
+    const byUserRoot =
+      (await this.room.storage.get<ByUserRoot>(SESSIONS_BY_USER_ROOT)) ?? {};
     const byRoom =
       (await this.room.storage.get<ByRoom>(SESSIONS_BY_ROOM)) ?? {};
-    return { byUserFile, byRoom };
+    return { byUserRoot, byRoom };
   }
 
-  private async save(byUserFile: ByUserFile, byRoom: ByRoom): Promise<void> {
-    await this.room.storage.put(SESSIONS_BY_USER_FILE, byUserFile);
+  private async save(byUserRoot: ByUserRoot, byRoom: ByRoom): Promise<void> {
+    await this.room.storage.put(SESSIONS_BY_USER_ROOT, byUserRoot);
     await this.room.storage.put(SESSIONS_BY_ROOM, byRoom);
   }
 
   private checkSecret(secret: unknown): boolean {
     return secret === this.room.env.BRIDGE_SECRET;
+  }
+
+  /** Push sessionsCountUpdate to a websocket room's connected clients */
+  private async notifyRoomSessionsCount(
+    roomId: string,
+    sessionsCount: number,
+    secret: string
+  ): Promise<void> {
+    const parties = this.room.context?.parties as
+      | {
+          websocket?: {
+            get: (id: string) => {
+              fetch: (req: Request) => Promise<Response>;
+            };
+          };
+        }
+      | undefined;
+    if (!parties?.websocket) {
+      return;
+    }
+    const room = parties.websocket.get(roomId);
+    await room.fetch(
+      new Request(`https://_/parties/websocket/${roomId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "notifyClient",
+          sessionsCount,
+          secret,
+        }),
+      })
+    );
   }
 
   /** GET /parties/websocket/:roomId with Authorization: Bearer <secret> returns { connections } */
@@ -140,6 +170,9 @@ export default class Registry implements Party.Server {
       if (action === "unregister") {
         return this.handleUnregister(body as UnregisterBody);
       }
+      if (action === "cleanup") {
+        return this.handleCleanup();
+      }
       if (action === "resolve") {
         return this.handleResolve(body as ResolveBody);
       }
@@ -153,17 +186,17 @@ export default class Registry implements Party.Server {
   }
 
   private async handleRegister(body: RegisterBody): Promise<Response> {
-    const { userHash, fileKey, roomId, fileName, userName } = body;
-    if (!(userHash && fileKey && roomId)) {
+    const { userHash, fileRootId, roomId, userName } = body;
+    if (!(userHash && fileRootId && roomId)) {
       return Response.json(
-        { error: "Missing userHash, fileKey or roomId" },
+        { error: "Missing userHash, fileRootId or roomId" },
         { status: 400 }
       );
     }
 
-    const { byUserFile, byRoom } = await this.getStored();
-    const key = userFileKey(userHash, fileKey);
-    const existing = byUserFile[key];
+    const { byUserRoot, byRoom } = await this.getStored();
+    const key = userRootKey(userHash, fileRootId);
+    const existing = byUserRoot[key];
 
     if (existing && existing.roomId !== roomId) {
       const connections = await this.getWebsocketConnections(existing.roomId);
@@ -178,32 +211,97 @@ export default class Registry implements Party.Server {
 
     const entry: SessionEntry = {
       roomId,
-      fileKey,
-      fileName,
+      fileRootId,
       userName,
       userHash,
       registeredAt: Date.now(),
     };
-    byUserFile[key] = entry;
-    byRoom[roomId] = { userHash, fileKey };
-    await this.save(byUserFile, byRoom);
-    return Response.json({ ok: true });
+    byUserRoot[key] = entry;
+    byRoom[roomId] = { userHash, fileRootId };
+    await this.save(byUserRoot, byRoom);
+    const sessionsCount = Object.values(byUserRoot).filter(
+      (e) => e.userHash === userHash
+    ).length;
+
+    // Notify other sessions of the same user so they show "multiple sessions" UI
+    if (sessionsCount > 1) {
+      const secret = (body as { secret?: string }).secret;
+      if (secret) {
+        const otherRoomIds = Object.entries(byRoom)
+          .filter(([rid, meta]) => meta.userHash === userHash && rid !== roomId)
+          .map(([rid]) => rid);
+        for (const otherRoomId of otherRoomIds) {
+          this.notifyRoomSessionsCount(
+            otherRoomId,
+            sessionsCount,
+            secret
+          ).catch((e) =>
+            console.error("[registry] notifyRoomSessionsCount failed:", e)
+          );
+        }
+      }
+    }
+
+    return Response.json({ ok: true, sessionsCount });
   }
 
   private async handleUnregister(body: UnregisterBody): Promise<Response> {
-    const { roomId } = body;
+    const { roomId, secret } = body;
     if (!roomId) {
       return Response.json({ error: "Missing roomId" }, { status: 400 });
     }
 
-    const { byUserFile, byRoom } = await this.getStored();
+    const { byUserRoot, byRoom } = await this.getStored();
     const meta = byRoom[roomId];
     if (meta) {
-      delete byUserFile[userFileKey(meta.userHash, meta.fileKey)];
+      const userHash = meta.userHash;
+      delete byUserRoot[userRootKey(meta.userHash, meta.fileRootId)];
       delete byRoom[roomId];
-      await this.save(byUserFile, byRoom);
+      await this.save(byUserRoot, byRoom);
+
+      // Notify remaining sessions of the same user about new count
+      const sessionsCount = Object.values(byUserRoot).filter(
+        (e) => e.userHash === userHash
+      ).length;
+      if (sessionsCount > 0 && secret) {
+        const remainingRoomIds = Object.entries(byRoom)
+          .filter(([, m]) => m.userHash === userHash)
+          .map(([rid]) => rid);
+        for (const otherRoomId of remainingRoomIds) {
+          this.notifyRoomSessionsCount(
+            otherRoomId,
+            sessionsCount,
+            secret
+          ).catch((e) =>
+            console.error("[registry] notifyRoomSessionsCount failed:", e)
+          );
+        }
+      }
     }
     return Response.json({ ok: true });
+  }
+
+  /** Remove sessions with 0 WebSocket connections (stale after plugin close/rebuild) */
+  private async handleCleanup(): Promise<Response> {
+    const { byUserRoot, byRoom } = await this.getStored();
+    const toRemove: string[] = [];
+    for (const roomId of Object.keys(byRoom)) {
+      const connections = await this.getWebsocketConnections(roomId);
+      if (connections === 0) {
+        toRemove.push(roomId);
+      }
+    }
+    if (toRemove.length > 0) {
+      for (const roomId of toRemove) {
+        const meta = byRoom[roomId];
+        if (meta) {
+          delete byUserRoot[userRootKey(meta.userHash, meta.fileRootId)];
+          delete byRoom[roomId];
+        }
+      }
+      await this.save(byUserRoot, byRoom);
+    }
+    return Response.json({ ok: true, removed: toRemove.length });
   }
 
   private async handleResolve(body: ResolveBody): Promise<Response> {
@@ -215,10 +313,10 @@ export default class Registry implements Party.Server {
       );
     }
 
-    const { byUserFile } = await this.getStored();
+    const { byUserRoot } = await this.getStored();
     const set = new Set(userHashes as string[]);
     const sessions: SessionEntry[] = [];
-    for (const entry of Object.values(byUserFile)) {
+    for (const entry of Object.values(byUserRoot)) {
       if (set.has(entry.userHash)) {
         sessions.push(entry);
       }
@@ -235,9 +333,9 @@ export default class Registry implements Party.Server {
       );
     }
 
-    const { byUserFile } = await this.getStored();
+    const { byUserRoot } = await this.getStored();
     const set = new Set(userHashes as string[]);
-    const sessions = Object.values(byUserFile).filter((e) =>
+    const sessions = Object.values(byUserRoot).filter((e) =>
       set.has(e.userHash)
     );
 
@@ -254,8 +352,6 @@ export default class Registry implements Party.Server {
           code: "MULTIPLE_SESSIONS",
           sessions: sessions.map((s) => ({
             sessionId: s.roomId,
-            fileKey: s.fileKey,
-            fileName: s.fileName,
             userName: s.userName,
           })),
         },

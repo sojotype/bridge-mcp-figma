@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router";
 import { useRoutingStatus } from "../../hooks/use-routing-status";
 import { useValidUrl } from "../../hooks/use-valid-url";
+import { frontendBroker } from "../../lib/frontend-broker";
+import { wsManager } from "../../lib/ws-manager";
 import { ROUTES } from "../../routes";
 import { useEndpoint } from "../../stores/endpoints";
 import { useSession } from "../../stores/session";
@@ -130,6 +132,14 @@ function SessionFooter() {
     return isWsActive ? "primary" : "neutral";
   })();
 
+  const handleConnect = () => {
+    frontendBroker.post("requestConnect");
+  };
+
+  const handleDisconnect = () => {
+    wsManager.close();
+  };
+
   return (
     <footer className="flex w-full items-center justify-between px-3 pt-5 pb-3">
       <Button
@@ -138,7 +148,11 @@ function SessionFooter() {
         onClick={() => navigate(ROUTES.WEBSOCKET)}
         showIcon
       />
-      <Button disabled={isDisabled} tone={buttonTone}>
+      <Button
+        disabled={isDisabled}
+        onClick={status === "connected" ? handleDisconnect : handleConnect}
+        tone={buttonTone}
+      >
         {buttonLabel}
       </Button>
     </footer>
