@@ -521,7 +521,7 @@ async function run() {
 
   figma.showUI(__html__, {
     width: PLUGIN_WIDTH,
-    height: 500,
+    height: 360,
     themeColors: true,
   });
 }

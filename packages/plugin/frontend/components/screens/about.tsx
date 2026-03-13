@@ -32,7 +32,7 @@ export default function AboutScreen({ route }: AboutScreenProps) {
 
   return (
     <Activity mode={route === ROUTES.ABOUT ? "visible" : "hidden"}>
-      <section className="flex flex-col gap-5 pt-10">
+      <section className="flex h-full flex-col justify-center gap-5 pt-10">
         <div className="flex flex-col gap-1 px-3 text-center">
           <p className="text-title font-medium text-neutral-12">
             Cursor to Figma: MCP Service

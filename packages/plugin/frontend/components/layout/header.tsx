@@ -1,21 +1,26 @@
 import { Tooltip } from "@base-ui/react/tooltip";
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import { useSnapshot } from "valtio";
 import { ROUTES } from "../../routes";
 import { endpointsStore } from "../../stores/endpoints";
 import { useSession } from "../../stores/session";
+import { Button } from "../ui/button";
 import { Callout } from "../ui/callout";
 import { Icon } from "../ui/icon";
 import { Link } from "../ui/link";
 import { TabButton } from "../ui/tab-button";
 
 interface HeaderProps {
+  pathname: string;
   route: keyof typeof ROUTES;
 }
 
-export default function Header({ route }: HeaderProps) {
+export default function Header({ pathname, route }: HeaderProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromError = (location.state as { fromError?: boolean } | null)
+    ?.fromError;
   const isTargetRoute = route === ROUTES.ROOT || route === ROUTES.WEBSOCKET;
   const { status } = useSession();
   const snap = useSnapshot(endpointsStore);
@@ -43,6 +48,45 @@ export default function Header({ route }: HeaderProps) {
     }
     prevTargetRef.current = isTargetRoute;
   }, [isTargetRoute]);
+
+  if (pathname === "/loading") {
+    return null;
+  }
+
+  if (pathname === "/error") {
+    return (
+      <header className="absolute top-0 right-0 left-0 flex w-full flex-col">
+        <nav className="flex w-full justify-end px-3 pt-3">
+          <Button
+            className="rounded"
+            iconName="infoCircle"
+            onClick={() =>
+              navigate(ROUTES.ABOUT, { state: { fromError: true } })
+            }
+            showIcon
+            showLabel={false}
+            variant="alpha"
+          />
+        </nav>
+      </header>
+    );
+  }
+
+  if (pathname === ROUTES.ABOUT && fromError) {
+    return (
+      <header className="flex w-full flex-col">
+        <nav className="flex w-full justify-end px-3 pt-3">
+          <Button
+            className="rotate-180 rounded"
+            iconName="caretRight"
+            onClick={() => navigate(-1)}
+            showIcon
+            variant="alpha"
+          />
+        </nav>
+      </header>
+    );
+  }
 
   return (
     <header className="flex w-full flex-col">
