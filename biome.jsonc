@@ -30,24 +30,15 @@
         "globals": [
           "figma",
           "__html__",
-          "__MCP_LOCAL_URL__",
-          "__MCP_REMOTE_URL__",
-          "__WEBSOCKET_LOCAL_URL__",
-          "__WEBSOCKET_REMOTE_URL__",
-          "__USER_HASH_SALT__"
+          "__USER_HASH_SALT__",
+          "__WEBSOCKET_PORT__"
         ]
       }
     },
     {
       "includes": ["packages/plugin/frontend/**"],
       "javascript": {
-        "globals": [
-          "__MCP_LOCAL_URL__",
-          "__MCP_REMOTE_URL__",
-          "__PLUGIN_VERSION__",
-          "__WEBSOCKET_LOCAL_URL__",
-          "__WEBSOCKET_REMOTE_URL__"
-        ]
+        "globals": ["__WEBSOCKET_PORT__", "__PLUGIN_VERSION__"]
       }
     }
   ]

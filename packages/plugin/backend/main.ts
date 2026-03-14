@@ -1,5 +1,4 @@
 import type { ToolsParams } from "@bridge-mcp-figma/api";
-import type { StoredEndpoints } from "../lib/events";
 import { obfuscateId } from "../lib/obfuscated";
 import { PLUGIN_WIDTH } from "./const";
 import { handleMessage } from "./handlers/imperative";
@@ -7,21 +6,14 @@ import { backendBroker } from "./utils/backend-broker";
 import {
   getOrCreateFileId,
   getSessionId,
-  loadEndpoints,
   loadLastScreen,
-  loadPersistSettings,
-  saveEndpoints,
+  loadUserPort,
   saveLastScreen,
-  setPersistSettings,
+  saveUserPort,
 } from "./utils/plugin-storage";
 import { resizeUi } from "./utils/resize-ui";
 
 const REGISTER_RETRY_MS = 30_000;
-
-const RE_HTTP_PROTOCOL = /^https?:\/\//i;
-const RE_WS_TO_HTTP = /^ws/;
-const RE_TRAILING_SLASH = /\/$/;
-const RE_ORIGIN = /^(https?:\/\/[^/]+)/;
 
 interface CommandMessage {
   args: unknown;
@@ -54,8 +46,8 @@ function handleControlMessage(
       },
     };
   }
-  if (msg.type === "alreadyActive") {
-    return { post: { type: "alreadyActive" }, startRetry: true };
+  if (msg.type === "duplicateSessionServer") {
+    return { post: { type: "duplicateSessionServer" } };
   }
   if (msg.type === "error") {
     return {
@@ -97,154 +89,26 @@ function handleReady(userHash: string): void {
   sendInitialSettings(userHash).catch(() => undefined);
 }
 
-async function handleRequestConnect(
-  sessionId: string,
-  userHash: string
-): Promise<void> {
-  const endpoints = await loadEndpoints(userHash);
-  const routing = endpoints?.websocket?.routing ?? "local";
-  const url =
-    endpoints?.websocket?.user[routing] ??
-    (routing === "local" ? __WEBSOCKET_LOCAL_URL__ : __WEBSOCKET_REMOTE_URL__);
-  const host = url.trim();
-  if (!host) {
-    backendBroker.post("error", { error: "WebSocket URL not configured" });
-    return;
-  }
-  console.log("[bridge] requestConnect, sending connect", {
-    host,
-    room: sessionId,
-  });
+function handleRequestConnect(port: number): void {
+  const effectivePort =
+    typeof port === "number" && Number.isFinite(port)
+      ? port
+      : Number.parseInt(__WEBSOCKET_PORT__, 10) || 8766;
+  const wsUrl = `ws://localhost:${effectivePort}`;
+  console.log("[bridge] requestConnect, sending connect", { host: wsUrl });
   backendBroker.post("connecting");
-  backendBroker.post("connect", { host, room: sessionId });
+  backendBroker.post("connect", { host: wsUrl });
 }
 
 async function sendInitialSettings(userHash: string): Promise<void> {
-  const persistSettings = await loadPersistSettings(userHash);
-  const [endpoints, lastScreen] = await Promise.all([
-    persistSettings ? loadEndpoints(userHash) : Promise.resolve(null),
+  const [userPort, lastScreen] = await Promise.all([
+    loadUserPort(userHash),
     loadLastScreen(userHash),
   ]);
   backendBroker.post("initialSettings", {
-    persistSettings,
-    endpoints: endpoints ?? undefined,
+    userPort: userPort ?? undefined,
     lastScreen: lastScreen ?? undefined,
   });
-}
-
-function getStatusFetchUrl(url: string, type: "mcp" | "websocket"): string {
-  const trimmed = url.trim();
-  if (!trimmed) {
-    return "";
-  }
-  let normalized = trimmed;
-  if (!RE_HTTP_PROTOCOL.test(trimmed)) {
-    normalized =
-      trimmed.startsWith("wss://") || trimmed.startsWith("ws://")
-        ? trimmed.replace(RE_WS_TO_HTTP, "http")
-        : `http://${trimmed}`;
-  }
-  const base = normalized.replace(RE_TRAILING_SLASH, "");
-  if (type === "mcp") {
-    return `${base}/status`;
-  }
-  const originMatch = base.match(RE_ORIGIN);
-  const origin = originMatch ? originMatch[1] : base;
-  return `${origin}/health`;
-}
-
-const STATUS_TIMEOUT_MS = 7000;
-
-async function handleCheckEndpointStatus(data: {
-  url: string;
-  type: "mcp" | "websocket";
-  _correlationId?: string;
-}): Promise<void> {
-  const { url, type, _correlationId } = data;
-  const fetchUrl = getStatusFetchUrl(url, type);
-  if (!fetchUrl) {
-    console.warn("[C2F:BACKEND]", type, "offline", "Cannot reach server", url);
-    backendBroker.post("endpointStatus", {
-      status: "offline",
-      message: "Cannot reach server",
-      checkedUrl: fetchUrl || url,
-      _correlationId,
-    });
-    return;
-  }
-
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    setTimeout(() => {
-      const err = new Error("Server is not responding");
-      err.name = "TimeoutError";
-      reject(err);
-    }, STATUS_TIMEOUT_MS);
-  });
-
-  try {
-    const res = await Promise.race([
-      fetch(fetchUrl, { method: "GET" }),
-      timeoutPromise,
-    ]);
-
-    let body: { ok?: boolean; message?: string } | null = null;
-    try {
-      body = (await res.json()) as { ok?: boolean; message?: string };
-    } catch {
-      /* ignore */
-    }
-
-    if (res?.ok) {
-      if (body?.ok === true) {
-        backendBroker.post("endpointStatus", {
-          status: "online",
-          checkedUrl: fetchUrl,
-          _correlationId,
-        });
-      } else {
-        const msg = body?.message ?? "Server reported a problem";
-        console.warn(
-          `[C2F:BACKEND] ${type.toUpperCase()} status check: server returned a problem. URL: ${fetchUrl}. Message: ${msg}.`
-        );
-        backendBroker.post("endpointStatus", {
-          status: "warning",
-          message: msg,
-          checkedUrl: fetchUrl,
-          _correlationId,
-        });
-      }
-    } else {
-      const message =
-        body?.message ??
-        (res?.status === 503
-          ? "Service temporarily unavailable (503)"
-          : `Server returned HTTP ${res?.status ?? "?"}`);
-      console.warn(
-        `[C2F:BACKEND] ${type.toUpperCase()} status check: server returned a problem. URL: ${fetchUrl}. Message: ${message}.`
-      );
-      backendBroker.post("endpointStatus", {
-        status: "warning",
-        message,
-        checkedUrl: fetchUrl,
-        _correlationId,
-      });
-    }
-  } catch (err) {
-    const isTimeout = err instanceof Error && err.name === "TimeoutError";
-    const message = isTimeout
-      ? "Server is not responding"
-      : "Cannot reach server";
-    console.error(
-      `[C2F:BACKEND] ${type.toUpperCase()} status check failed (offline). URL: ${fetchUrl}. ${message}. Error:`,
-      err
-    );
-    backendBroker.post("endpointStatus", {
-      status: "offline",
-      message,
-      checkedUrl: fetchUrl,
-      _correlationId,
-    });
-  }
 }
 
 function handleGetUserHash(data: { _correlationId?: string }): string | null {
@@ -271,7 +135,9 @@ function handleGetUserHash(data: { _correlationId?: string }): string | null {
 function handleWsOpened(
   _sessionId: string,
   fileRootId: string,
-  sendToSocket: SendToSocket
+  sendToSocket: SendToSocket,
+  takeOverPending: boolean,
+  clearTakeOver: () => void
 ): string | null {
   console.log("[bridge] WebSocket open (via UI)");
   const user = figma.currentUser;
@@ -281,15 +147,19 @@ function handleWsOpened(
     return null;
   }
   const userHash = obfuscateId(user.id);
-  console.log("[bridge] sending register after wsOpened");
+  console.log("[bridge] sending register after wsOpened", {
+    takeOver: takeOverPending,
+  });
   sendToSocket(
     JSON.stringify({
       type: "register",
       userHash,
       fileRootId,
       userName: user.name,
+      takeOver: takeOverPending,
     })
   );
+  clearTakeOver();
   return userHash;
 }
 
@@ -314,13 +184,52 @@ function handleUiResize(data: unknown): void {
   }
 }
 
+interface PostPayload {
+  type: string;
+  userHash?: string;
+  error?: string;
+  sessionsCount?: number;
+}
+
+function emitPostMessage(
+  p: PostPayload,
+  handled: { clearRetry?: boolean },
+  msgData: { sessionId?: string },
+  sessionId: string,
+  onRegistered?: () => void
+): void {
+  if (p.type === "registered") {
+    if (handled.clearRetry) {
+      backendBroker.post("connected", {
+        sessionId: msgData.sessionId ?? sessionId,
+        userHash: p.userHash ?? "",
+        sessionsCount: p.sessionsCount,
+      });
+      onRegistered?.();
+    } else {
+      backendBroker.post("registered", {
+        userHash: "",
+        sessionsCount: p.sessionsCount,
+      });
+    }
+  } else if (p.type === "duplicateSessionServer") {
+    backendBroker.post("duplicateSessionServer");
+    backendBroker.post("closeSocket");
+  } else if (p.type === "error") {
+    backendBroker.post("connectionError", {
+      error: p.error ?? "Unknown error",
+    });
+  }
+}
+
 function handleWsMessage(
   raw: string,
   sendToSocket: SendToSocket,
   registerRetryTimer: ReturnType<typeof setInterval> | null,
   lastUserHash: string | null,
   sendRegister: () => void,
-  sessionId: string
+  sessionId: string,
+  onRegistered?: () => void
 ): ReturnType<typeof setInterval> | null | undefined {
   let parsed: unknown;
   try {
@@ -329,10 +238,14 @@ function handleWsMessage(
     return undefined;
   }
   const msgData = parsed as { type?: string; [k: string]: unknown };
+  if (msgData.type === "takenOver") {
+    figma.closePlugin();
+    return undefined;
+  }
   if (
     msgData.type === "registered" ||
     msgData.type === "sessionsCountUpdate" ||
-    msgData.type === "alreadyActive" ||
+    msgData.type === "duplicateSessionServer" ||
     msgData.type === "error"
   ) {
     console.log("[bridge] Control message", msgData.type, msgData);
@@ -352,34 +265,13 @@ function handleWsMessage(
     nextTimer = null;
   }
   if (handled.post) {
-    const p = handled.post as {
-      type: string;
-      userHash?: string;
-      error?: string;
-      sessionsCount?: number;
-    };
-    if (p.type === "registered") {
-      if (handled.clearRetry) {
-        // First register: send "connected" with all data including sessionsCount
-        backendBroker.post("connected", {
-          sessionId,
-          userHash: p.userHash ?? "",
-          sessionsCount: p.sessionsCount,
-        });
-      } else {
-        // sessionsCountUpdate: send "registered" only with sessionsCount
-        backendBroker.post("registered", {
-          userHash: "",
-          sessionsCount: p.sessionsCount,
-        });
-      }
-    } else if (p.type === "alreadyActive") {
-      backendBroker.post("alreadyActive");
-    } else if (p.type === "error") {
-      backendBroker.post("error", {
-        error: p.error ?? "Unknown error",
-      });
-    }
+    emitPostMessage(
+      handled.post as PostPayload,
+      handled,
+      msgData as { sessionId?: string },
+      sessionId,
+      onRegistered
+    );
   }
   if (handled.startRetry && !nextTimer) {
     nextTimer = setInterval(sendRegister, REGISTER_RETRY_MS);
@@ -395,6 +287,8 @@ async function run() {
 
   let registerRetryTimer: ReturnType<typeof setInterval> | null = null;
   let lastUserHash: string | null = userHash;
+  let takeOverPending = false;
+  let takeOverSent = false;
 
   const sendToSocket: SendToSocket = (data) => {
     backendBroker.post("send", data);
@@ -418,25 +312,29 @@ async function run() {
     );
   }
 
-  backendBroker.on("ready", () => handleReady(userHash));
-
-  backendBroker.on("requestConnect", () => {
-    handleRequestConnect(sessionId, userHash).catch((err) => {
-      console.error("[bridge] requestConnect failed:", err);
-      backendBroker.post("error", {
-        error: err instanceof Error ? err.message : String(err),
-      });
-    });
+  backendBroker.on("ready", () => {
+    handleReady(userHash);
   });
 
-  backendBroker.on("checkEndpointStatus", (data) => {
-    handleCheckEndpointStatus(
-      data as {
-        url: string;
-        type: "mcp" | "websocket";
-        _correlationId?: string;
-      }
+  backendBroker.on("takeOver", (data) => {
+    takeOverPending = true;
+    const port = (data as { port?: number })?.port;
+    handleRequestConnect(
+      typeof port === "number" && Number.isFinite(port)
+        ? port
+        : Number.parseInt(__WEBSOCKET_PORT__, 10) || 8766
     );
+  });
+
+  backendBroker.on("requestConnect", (data) => {
+    const port = (data as { port?: number })?.port;
+    if (typeof port !== "number" || !Number.isFinite(port)) {
+      backendBroker.post("connectionError", {
+        error: "Invalid port for requestConnect",
+      });
+      return;
+    }
+    handleRequestConnect(port);
   });
 
   backendBroker.on("getUserHash", async (data) => {
@@ -447,7 +345,19 @@ async function run() {
   });
 
   backendBroker.on("wsOpened", async () => {
-    const hash = await handleWsOpened(sessionId, fileRootId, sendToSocket);
+    const hash = await handleWsOpened(
+      sessionId,
+      fileRootId,
+      sendToSocket,
+      takeOverPending,
+      () => {
+        const wasTakeOver = takeOverPending;
+        takeOverPending = false;
+        if (wasTakeOver) {
+          takeOverSent = true;
+        }
+      }
+    );
     if (hash) {
       lastUserHash = hash;
     }
@@ -463,7 +373,13 @@ async function run() {
       registerRetryTimer,
       lastUserHash,
       sendRegister,
-      sessionId
+      sessionId,
+      () => {
+        if (takeOverSent) {
+          backendBroker.post("takeOverComplete");
+          takeOverSent = false;
+        }
+      }
     );
     if (nextTimer !== undefined) {
       registerRetryTimer = nextTimer;
@@ -484,29 +400,14 @@ async function run() {
     );
   });
 
-  backendBroker.on("setPersistSettings", async (data) => {
-    const persist = data?.persist ?? true;
-    const u = figma.currentUser;
-    const hash = u?.id ? obfuscateId(u.id) : "anonymous";
-    await setPersistSettings(hash, persist);
-  });
-
-  backendBroker.on("getPersistSettings", async (data) => {
-    const u = figma.currentUser;
-    const hash = u?.id ? obfuscateId(u.id) : "anonymous";
-    const persistSettings = await loadPersistSettings(hash);
-    backendBroker.post("persistSettings", {
-      persistSettings,
-      _correlationId: (data as { _correlationId?: string })?._correlationId,
-    });
-  });
-
-  backendBroker.on("saveEndpoints", async (data) => {
-    const u = figma.currentUser;
-    const hash = u?.id ? obfuscateId(u.id) : "anonymous";
-    if (data) {
-      await saveEndpoints(hash, data as StoredEndpoints);
+  backendBroker.on("saveUserPort", async (data) => {
+    const port = (data as { port?: number | null })?.port;
+    if (port !== null && (typeof port !== "number" || !Number.isFinite(port))) {
+      return;
     }
+    const u = figma.currentUser;
+    const hash = u?.id ? obfuscateId(u.id) : "anonymous";
+    await saveUserPort(hash, port ?? null);
   });
 
   backendBroker.on("saveLastScreen", async (data) => {

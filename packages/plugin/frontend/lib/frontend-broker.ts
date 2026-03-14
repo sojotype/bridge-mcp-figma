@@ -65,25 +65,16 @@ const on = <E extends InEvent>(
  *
  * @example
  * const { userHash } = await frontendBroker.postAndWait("getUserHash");
- * const { online } = await frontendBroker.postAndWait("checkEndpointStatus", { url, type });
  */
 const postAndWait = <E extends keyof RequestResponseMap>(
   event: E & OutEvent,
-  data?: E extends "checkEndpointStatus"
-    ? { url: string; type: "mcp" | "websocket" }
-    : never,
   options: { timeoutMs?: number } = {}
 ): Promise<EventData<BackendToFrontend, RequestResponseMap[E] & InEvent>> => {
-  const requestData = data;
   const { timeoutMs = 5000 } = options;
 
   const correlationId = generateUUID();
   const responseEvent = (
-    {
-      getUserHash: "userHash",
-      checkEndpointStatus: "endpointStatus",
-      getPersistSettings: "persistSettings",
-    } satisfies RequestResponseMap
+    { getUserHash: "userHash" } satisfies RequestResponseMap
   )[event] as RequestResponseMap[E] & InEvent;
 
   return new Promise((resolve, reject) => {
@@ -96,32 +87,23 @@ const postAndWait = <E extends keyof RequestResponseMap>(
       );
     }, timeoutMs);
 
-    const unsub = on(responseEvent, (data) => {
-      const d = data as { _correlationId?: string };
+    const unsub = on(responseEvent, (responseData) => {
+      const d = responseData as { _correlationId?: string };
       if (d?._correlationId !== correlationId) {
         return;
       }
       clearTimeout(timer);
       unsub();
       resolve(
-        data as EventData<BackendToFrontend, RequestResponseMap[E] & InEvent>
+        responseData as EventData<
+          BackendToFrontend,
+          RequestResponseMap[E] & InEvent
+        >
       );
     });
 
     if (event === "getUserHash") {
       post("getUserHash", { _correlationId: correlationId });
-    } else if (
-      event === "checkEndpointStatus" &&
-      requestData?.url &&
-      requestData?.type
-    ) {
-      post("checkEndpointStatus", {
-        url: requestData.url,
-        type: requestData.type,
-        _correlationId: correlationId,
-      });
-    } else if (event === "getPersistSettings") {
-      post("getPersistSettings", { _correlationId: correlationId });
     }
   });
 };

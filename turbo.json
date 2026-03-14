@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalPassThroughEnv": ["PARTYKIT_HOST", "BRIDGE_SECRET"],
+  "globalPassThroughEnv": ["WEBSOCKET_PORT"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

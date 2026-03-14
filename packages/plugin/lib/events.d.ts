@@ -5,17 +5,6 @@
  * Request-response pairs use `_correlationId` in data to match responses to requests.
  */
 
-export interface StoredEndpoints {
-  mcp: {
-    routing: "local" | "remote";
-    user: { local: string | null; remote: string | null };
-  };
-  websocket: {
-    routing: "local" | "remote";
-    user: { local: string | null; remote: string | null };
-  };
-}
-
 /**
  * Events sent from the plugin UI (iframe) to the backend.
  * - ready: UI is mounted and ready
@@ -25,36 +14,28 @@ export interface StoredEndpoints {
  */
 export type FrontendToBackend =
   | { event: "ready" }
-  | { event: "requestConnect" }
+  | { event: "requestConnect"; data: { port: number } }
   | { event: "wsOpened" }
   | { event: "wsMessage"; data: string }
   | { event: "wsClosed" }
   | { event: "uiResize"; data: { height: number } }
   | { event: "getUserHash"; data: { _correlationId: string } }
   | { event: "showConsoleHint" }
-  | {
-      event: "checkEndpointStatus";
-      data: {
-        type: "mcp" | "websocket";
-        url: string;
-        _correlationId: string;
-      };
-    }
-  | { event: "setPersistSettings"; data: { persist: boolean } }
-  | { event: "getPersistSettings"; data: { _correlationId: string } }
-  | { event: "saveEndpoints"; data: StoredEndpoints }
-  | { event: "saveLastScreen"; data: { route: string } };
+  | { event: "saveUserPort"; data: { port: number | null } }
+  | { event: "saveLastScreen"; data: { route: string } }
+  | { event: "takeOver"; data: { port: number } }
+  | { event: "pluginClosing" };
 
 /**
  * Events sent from the backend to the plugin UI.
  * - connect: Init WebSocket connection params
  * - send: Raw message to forward to WebSocket
  * - connected/disconnected: Session state
- * - registered/alreadyActive/error: Registration/control flow
+ * - registered/duplicateSessionServer/closeSocket/error: Registration/control flow
  * - userHash: Response to getUserHash (includes _correlationId when requested)
  */
 export type BackendToFrontend =
-  | { event: "connect"; data: { host: string; room: string } }
+  | { event: "connect"; data: { host: string } }
   | { event: "connecting" }
   | { event: "send"; data: string }
   | {
@@ -63,30 +44,22 @@ export type BackendToFrontend =
     }
   | { event: "disconnected" }
   | { event: "registered"; data: { userHash?: string; sessionsCount?: number } }
-  | { event: "alreadyActive" }
+  | { event: "duplicateSessionServer" }
   | { event: "userHash"; data: { userHash: string; _correlationId?: string } }
   | { event: "error"; data: { error: string; _correlationId?: string } }
   | {
-      event: "endpointStatus";
-      data: {
-        _correlationId?: string;
-        checkedUrl?: string;
-        message?: string;
-        status: "online" | "warning" | "offline";
-      };
+      event: "connectionError";
+      data: { error: string };
     }
   | {
       event: "initialSettings";
       data: {
-        persistSettings: boolean;
-        endpoints?: StoredEndpoints;
+        userPort?: number;
         lastScreen?: string;
       };
     }
-  | {
-      event: "persistSettings";
-      data: { persistSettings: boolean; _correlationId?: string };
-    };
+  | { event: "closeSocket" }
+  | { event: "takeOverComplete" };
 
 /**
  * Extracts the `data` type for a specific event from a union.
@@ -103,6 +76,4 @@ export type EventData<
  */
 export interface RequestResponseMap {
   getUserHash: "userHash";
-  checkEndpointStatus: "endpointStatus";
-  getPersistSettings: "persistSettings";
 }

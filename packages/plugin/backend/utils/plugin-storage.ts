@@ -1,4 +1,3 @@
-import type { StoredEndpoints } from "../../lib/events";
 import { generateUUID } from "../../lib/uuid";
 
 const STORAGE_PREFIX = "C2F_";
@@ -24,8 +23,7 @@ export function getOrCreateFileId(): string {
 
 export interface UserPluginData {
   sessions: Record<string, string>;
-  persistSettings?: boolean;
-  endpoints?: StoredEndpoints;
+  userPort?: number;
   lastScreen?: string;
 }
 
@@ -46,13 +44,13 @@ export async function loadUserData(
   if (!sessions || typeof sessions !== "object" || Array.isArray(sessions)) {
     return null;
   }
+  const userPort =
+    typeof data.userPort === "number" && Number.isFinite(data.userPort)
+      ? data.userPort
+      : undefined;
   return {
     sessions: sessions as Record<string, string>,
-    persistSettings:
-      data.persistSettings === undefined
-        ? undefined
-        : Boolean(data.persistSettings),
-    endpoints: data.endpoints as StoredEndpoints | undefined,
+    userPort,
     lastScreen:
       typeof data.lastScreen === "string" ? data.lastScreen : undefined,
   };
@@ -77,66 +75,31 @@ export async function getSessionId(
   }
   const sessionId = `room_${generateUUID()}`;
   const sessions = { ...(data?.sessions ?? {}), [fileRootId]: sessionId };
-  await saveUserData(userHash, { ...data, sessions });
+  await saveUserData(userHash, {
+    sessions,
+    userPort: data?.userPort,
+    lastScreen: data?.lastScreen,
+  });
   return sessionId;
 }
 
-export async function loadPersistSettings(userHash: string): Promise<boolean> {
+export async function loadUserPort(userHash: string): Promise<number | null> {
   const data = await loadUserData(userHash);
-  return data?.persistSettings === undefined
-    ? true
-    : Boolean(data.persistSettings);
+  const port = data?.userPort;
+  if (typeof port === "number" && Number.isFinite(port)) {
+    return port;
+  }
+  return null;
 }
 
-export async function loadEndpoints(
-  userHash: string
-): Promise<StoredEndpoints | null> {
-  const data = await loadUserData(userHash);
-  const endpoints = data?.endpoints;
-  if (!endpoints || typeof endpoints !== "object") {
-    return null;
-  }
-  const mcp = endpoints.mcp;
-  const websocket = endpoints.websocket;
-  if (!(mcp && websocket)) {
-    return null;
-  }
-  return { mcp, websocket };
-}
-
-export async function setPersistSettings(
+export async function saveUserPort(
   userHash: string,
-  persist: boolean
+  port: number | null
 ): Promise<void> {
-  const data = await loadUserData(userHash);
-  if (persist) {
-    await saveUserData(userHash, {
-      sessions: data?.sessions ?? {},
-      persistSettings: true,
-      endpoints: data?.endpoints,
-      lastScreen: data?.lastScreen,
-    });
-  } else {
-    await saveUserData(userHash, {
-      sessions: data?.sessions ?? {},
-      lastScreen: data?.lastScreen,
-    });
-  }
-}
-
-export async function saveEndpoints(
-  userHash: string,
-  endpoints: StoredEndpoints
-): Promise<void> {
-  const persist = await loadPersistSettings(userHash);
-  if (!persist) {
-    return;
-  }
   const data = await loadUserData(userHash);
   await saveUserData(userHash, {
     sessions: data?.sessions ?? {},
-    persistSettings: true,
-    endpoints,
+    userPort: port ?? undefined,
     lastScreen: data?.lastScreen,
   });
 }
@@ -152,17 +115,9 @@ export async function saveLastScreen(
   route: string
 ): Promise<void> {
   const data = await loadUserData(userHash);
-  if (data?.persistSettings !== false) {
-    await saveUserData(userHash, {
-      sessions: data?.sessions ?? {},
-      persistSettings: true,
-      endpoints: data?.endpoints,
-      lastScreen: route,
-    });
-  } else {
-    await saveUserData(userHash, {
-      sessions: data?.sessions ?? {},
-      lastScreen: route,
-    });
-  }
+  await saveUserData(userHash, {
+    sessions: data?.sessions ?? {},
+    userPort: data?.userPort,
+    lastScreen: route,
+  });
 }

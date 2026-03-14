@@ -1,124 +1,55 @@
-import { Tabs as BaseTabs } from "@base-ui/react/tabs";
+import type { ReactNode } from "react";
 import { tv } from "../../lib/tv";
-import { Button } from "./button";
-import { Indicator } from "./indicator";
+import { Icon, type IconName } from "./icon";
 import { Tooltip } from "./tooltip";
 
-const toggle = tv({
+const tab = tv({
   base: [
-    "flex h-6 w-fit items-center justify-center gap-x-[3px] overflow-hidden rounded py-1 pr-1 pl-2",
-    "bg-neutral-4 shadow-[inset_0_0_0_1px_var(--color-neutral-a-3)]",
-    "text-body text-neutral-11",
-    "transition-[background-color,box-shadow,color] duration-300 ease-out hover:transition-none",
-    "hover:shadow-[inset_0_0_0_1px_var(--color-neutral-a-6)]",
+    "flex h-7 items-center justify-center gap-x-1.5 rounded bg-neutral-4 px-2 py-1 text-body text-neutral-12 shadow-[inset_0_0_0_1px_var(--color-neutral-a-3)] select-none",
+    "transition-[background-color] duration-300 ease-out",
+    "hover:bg-neutral-6 hover:transition-none",
+    "focus-outline",
   ].join(" "),
   variants: {
     active: {
-      true: [
-        "bg-neutral-1 text-neutral-12 shadow-[inset_0_0_0_1px_var(--color-neutral-a-5)]",
-        "hover:shadow-[inset_0_0_0_1px_var(--color-neutral-a-5)]",
-      ].join(" "),
+      true: "bg-primary-a-2 shadow-[inset_0_0_0_1px_var(--color-primary-8)] hover:bg-primary-a-2",
+    },
+    withTooltip: {
+      true: "size-7",
     },
   },
 });
 
-export interface TabsRootProps {
-  children: React.ReactNode;
-  defaultValue?: BaseTabs.Tab.Value;
-  value?: BaseTabs.Tab.Value;
-  onValueChange?: BaseTabs.Root.Props["onValueChange"];
+interface TabButtonProps {
+  active: boolean;
+  iconName: IconName;
+  tooltip?: string;
+  onClick?: () => void;
+  children?: ReactNode;
 }
 
-export interface TabItemProps {
-  label?: string;
-  value: string;
-  state: "online" | "offline" | "connecting" | "idle" | "warning";
-  statusMessage?: string | null;
-  routing?: "local" | "remote";
-  onOpenConsole?: () => void;
-}
-
-const stateLabels: Record<TabItemProps["state"], string> = {
-  online: "Online",
-  offline: "Offline",
-  connecting: "Connecting",
-  idle: "Idle",
-  warning: "Warning",
-};
-
-function TabsRoot({
+export const TabButton = ({
+  tooltip,
+  active,
+  iconName = "plugsDisconnected",
+  onClick,
   children,
-  defaultValue,
-  value,
-  onValueChange,
-}: TabsRootProps) {
-  return (
-    <BaseTabs.Root
-      defaultValue={defaultValue}
-      onValueChange={onValueChange}
-      value={value}
+}: TabButtonProps) => {
+  const withTooltip = tooltip !== undefined;
+
+  const button = (
+    <button
+      className={tab({ active, withTooltip })}
+      onClick={onClick}
+      type="button"
     >
+      <Icon className="size-4 shrink-0" name={iconName} />
       {children}
-    </BaseTabs.Root>
-  );
-}
-
-function TabItem({
-  label = "Toggle",
-  value,
-  state,
-  statusMessage,
-  routing,
-  onOpenConsole,
-}: TabItemProps) {
-  const baseContent =
-    state === "warning" && statusMessage ? statusMessage : stateLabels[state];
-  const showConsoleButton = Boolean(
-    routing === "local" &&
-      (state === "warning" || state === "offline") &&
-      onOpenConsole
+    </button>
   );
 
-  const tooltipContent = showConsoleButton ? (
-    <Button
-      aria-label="Open console"
-      className="h-6 rounded-[2px] bg-transparent pl-2.5 text-neutral-11 hover:bg-neutral-4"
-      iconName="console"
-      onClick={(e) => {
-        e.stopPropagation();
-        onOpenConsole?.();
-      }}
-      showIcon
-      tone="neutral"
-      variant="alpha"
-    >
-      {baseContent}
-    </Button>
-  ) : (
-    baseContent
-  );
-
-  const tooltipStyles = showConsoleButton ? "p-0.5" : "";
-
-  return (
-    <Tooltip className={tooltipStyles} content={tooltipContent}>
-      <BaseTabs.Tab
-        className={(tabState) =>
-          toggle({
-            active: tabState.active,
-          })
-        }
-        value={value}
-      >
-        <span className="relative z-2 shrink-0 whitespace-nowrap">{label}</span>
-        <Indicator variant={state} />
-      </BaseTabs.Tab>
-    </Tooltip>
-  );
-}
-
-export const Tabs = {
-  Root: TabsRoot,
-  List: BaseTabs.List,
-  Item: TabItem,
+  if (withTooltip) {
+    return <Tooltip content={tooltip}>{button}</Tooltip>;
+  }
+  return button;
 };

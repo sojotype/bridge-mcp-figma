@@ -19,21 +19,13 @@ export default defineConfig(({ mode }) => {
   ) as { version?: string };
   const pluginVersion = rootPkg.version ?? "0.0.0";
 
-  const mcpLocalUrl = env.MCP_LOCAL_URL ?? "http://localhost:3000/mcp";
-  const mcpRemoteUrl = env.MCP_REMOTE_URL ?? "https://your-mcp.example.com/mcp";
-  const websocketLocalUrl = env.WEBSOCKET_LOCAL_URL ?? "http://localhost:1999";
-  const websocketRemoteUrl =
-    env.WEBSOCKET_REMOTE_URL ??
-    "https://your-websocket.example.com/party/websocket";
+  const websocketPort = Number.parseInt(env.WEBSOCKET_PORT, 10) || 8766;
 
   return {
     root: uiRoot,
     define: {
       __PLUGIN_VERSION__: JSON.stringify(pluginVersion),
-      __MCP_LOCAL_URL__: JSON.stringify(mcpLocalUrl),
-      __MCP_REMOTE_URL__: JSON.stringify(mcpRemoteUrl),
-      __WEBSOCKET_LOCAL_URL__: JSON.stringify(websocketLocalUrl),
-      __WEBSOCKET_REMOTE_URL__: JSON.stringify(websocketRemoteUrl),
+      __WEBSOCKET_PORT__: JSON.stringify(websocketPort),
     },
     plugins: [react(), viteSingleFile(), tailwindcss()],
     build: {

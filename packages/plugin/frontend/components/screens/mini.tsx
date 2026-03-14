@@ -1,15 +1,12 @@
 import { Activity } from "react";
-import { useNavigate } from "react-router";
-import { useRoutingStatus } from "../../hooks/use-routing-status";
 import { copyToClipboard } from "../../lib/copy";
 import { frontendBroker } from "../../lib/frontend-broker";
 import { tv } from "../../lib/tv";
 import { wsManager } from "../../lib/ws-manager";
 import { ROUTES } from "../../routes";
-import { useEndpoint } from "../../stores/endpoints";
 import { useSession } from "../../stores/session";
+import { useSettings } from "../../stores/settings";
 import { Button } from "../ui/button";
-import { Callout } from "../ui/callout";
 import { Gradient } from "../ui/gradient";
 
 interface MiniScreenProps {
@@ -31,18 +28,12 @@ const gradientStyles = tv({
 });
 
 export default function MiniScreen({ route }: MiniScreenProps) {
-  const navigate = useNavigate();
+  const { port } = useSettings();
   const { status, sessionId, sessionsCount } = useSession();
-  const { state: endpoint } = useEndpoint("websocket");
-  const { localStatus, remoteStatus } = useRoutingStatus("websocket");
-
-  const selectedWsStatus =
-    endpoint.routing === "local" ? localStatus : remoteStatus;
-  const showWebSocketCallout = selectedWsStatus !== "online";
-  const isWsActive = selectedWsStatus === "online";
+  const isWsActive = true;
 
   const handleConnect = () => {
-    frontendBroker.post("requestConnect");
+    frontendBroker.post("requestConnect", { port });
   };
 
   const handleDisconnect = () => {
@@ -55,36 +46,19 @@ export default function MiniScreen({ route }: MiniScreenProps) {
     }
   };
 
-  const handleFixWebSocket = () => {
-    navigate(ROUTES.WEBSOCKET);
-  };
-
   const isConnectDisabled =
     status === "connecting" || (status === "disconnected" && !isWsActive);
 
   return (
     <Activity mode={route === ROUTES.MINI ? "visible" : "hidden"}>
-      <div className="flex flex-col gap-2 pt-3">
-        {showWebSocketCallout && (
-          <Callout title=" " tone="error">
-            <p>
-              Please specify at least one active WebSocket so that the plugin
-              can connect to it.
-            </p>
-            <Button onClick={handleFixWebSocket} tone="error" variant="alpha">
-              Fix
-            </Button>
-          </Callout>
-        )}
+      <div className="flex flex-col gap-2 pt-4">
         <div className="flex items-center gap-x-2">
           <Gradient
             className={gradientStyles({ status })}
             tone={status === "connected" ? "success" : "neutral"}
           >
             <span className="flex w-full">
-              {status === "connected"
-                ? `Connected to ${endpoint.url}`
-                : "Not Connected"}
+              {status === "connected" ? "Connected" : "Not Connected"}
             </span>
             {sessionsCount > 1 && sessionId && (
               <Button
@@ -93,9 +67,12 @@ export default function MiniScreen({ route }: MiniScreenProps) {
                 iconName="copy"
                 onClick={handleCopySessionId}
                 showIcon
+                showLabel={false}
                 tone="success"
                 variant="alpha"
-              />
+              >
+                Copy Session ID
+              </Button>
             )}
             {status === "connected" && (
               <Button
@@ -104,9 +81,12 @@ export default function MiniScreen({ route }: MiniScreenProps) {
                 iconName="plugsDisconnected"
                 onClick={handleDisconnect}
                 showIcon
+                showLabel={false}
                 tone="error"
                 variant="alpha"
-              />
+              >
+                Disconnect
+              </Button>
             )}
             {status !== "connected" && (
               <Button
@@ -116,9 +96,12 @@ export default function MiniScreen({ route }: MiniScreenProps) {
                 iconName="plugsConnected"
                 onClick={handleConnect}
                 showIcon
+                showLabel={false}
                 tone={isWsActive ? "primary" : "neutral"}
                 variant="alpha"
-              />
+              >
+                {status === "connecting" ? "Connecting" : "Connect"}
+              </Button>
             )}
           </Gradient>
         </div>

@@ -16,7 +16,8 @@
     "prepare": "lefthook install",
     "dev": "bun run --env-file=.env turbo run dev",
     "dev:plugin": "bun run --env-file=.env turbo run dev --filter=bridge-mcp-figma/plugin",
-    "dev:mcp": "bun run --env-file=.env turbo run dev --filter=bridge-mcp-figma/mcp-server",
+    "dev:mcp": "bun run --env-file=.env turbo run dev --filter=bridge-mcp-figma/mcp",
+    "dev:site": "bun run --env-file=.env turbo run dev --filter=bridge-mcp-figma/site",
     "build": "turbo run build",
     "generate:plugin-api-agent": "bun run --cwd packages/api generate:plugin-api-agent"
   },

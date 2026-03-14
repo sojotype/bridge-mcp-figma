@@ -2,6 +2,7 @@ import { proxy, useSnapshot } from "valtio";
 import { frontendBroker } from "../lib/frontend-broker";
 
 type SessionStatus = "disconnected" | "connecting" | "connected";
+type ServerStatus = "online" | "offline" | "warning" | null;
 
 interface SessionState {
   status: SessionStatus;
@@ -9,7 +10,8 @@ interface SessionState {
   sessionsCount: number;
   userHash: string | null;
   error: string | null;
-  alreadyActive: boolean;
+  duplicateSessionServer: boolean;
+  serverStatus: ServerStatus;
 }
 
 export const sessionStore = proxy<SessionState>({
@@ -18,7 +20,8 @@ export const sessionStore = proxy<SessionState>({
   sessionsCount: 0,
   userHash: null,
   error: null,
-  alreadyActive: false,
+  duplicateSessionServer: false,
+  serverStatus: null,
 });
 
 let isListening = false;
@@ -44,7 +47,7 @@ function ensureSessionListener() {
     sessionStore.sessionsCount = sessionsCount ?? 1;
     sessionStore.userHash = userHash ?? null;
     sessionStore.error = null;
-    sessionStore.alreadyActive = false;
+    sessionStore.duplicateSessionServer = false;
   });
 
   frontendBroker.on("disconnected", () => {
@@ -54,13 +57,23 @@ function ensureSessionListener() {
     sessionStore.userHash = null;
   });
 
-  frontendBroker.on("alreadyActive", () => {
-    sessionStore.alreadyActive = true;
+  frontendBroker.on("duplicateSessionServer", () => {
+    sessionStore.duplicateSessionServer = true;
+  });
+
+  frontendBroker.on("takeOverComplete", () => {
+    sessionStore.duplicateSessionServer = false;
   });
 
   frontendBroker.on("error", (data) => {
     const { error } = (data ?? {}) as { error?: string };
     sessionStore.error = error ?? "Unknown error";
+    sessionStore.status = "disconnected";
+  });
+
+  frontendBroker.on("connectionError", (data) => {
+    const { error } = (data ?? {}) as { error?: string };
+    sessionStore.error = error ?? "Connection failed";
     sessionStore.status = "disconnected";
   });
 

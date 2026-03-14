@@ -1,17 +1,39 @@
-import { Activity } from "react";
-import { useNavigate } from "react-router";
-import { useRoutingStatus } from "../../hooks/use-routing-status";
+import { Activity, useEffect, useRef } from "react";
 import { copyToClipboard } from "../../lib/copy";
 import { tv } from "../../lib/tv";
 import { ROUTES } from "../../routes";
-import { useEndpoint } from "../../stores/endpoints";
-import { useSession } from "../../stores/session";
+import { sessionStore, useSession } from "../../stores/session";
+import { useSettings } from "../../stores/settings";
 import { Button } from "../ui/button";
 import { Callout } from "../ui/callout";
 import { Gradient } from "../ui/gradient";
 import { Link } from "../ui/link";
 
 const AGENT_CAPABILITIES_URL = "#";
+const SERVER_CHECK_INTERVAL_MS = 10_000;
+const OFFLINE_RETRY_MS = 3000;
+const HEALTH_TIMEOUT_MS = 7000;
+
+async function checkHealth(port: number): Promise<void> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`http://localhost:${port}/health`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    const body = (await res.json()) as { ok?: boolean };
+    if (res.ok && body?.ok === true) {
+      sessionStore.serverStatus = "online";
+    } else {
+      sessionStore.serverStatus = "offline";
+    }
+  } catch {
+    sessionStore.serverStatus = "offline";
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function formatConnectionError(raw: string): string {
   const lower = raw.toLowerCase();
@@ -38,18 +60,38 @@ export default function SessionScreen({
 }: {
   route: keyof typeof ROUTES;
 }) {
-  const navigate = useNavigate();
-  const { status, sessionId, sessionsCount, error } = useSession();
-  const { state: endpoint } = useEndpoint("websocket");
-  const { localStatus, remoteStatus } = useRoutingStatus("websocket");
+  const { status, sessionId, sessionsCount, error, serverStatus } =
+    useSession();
+  const { port } = useSettings();
+  const checkIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const selectedWsStatus =
-    endpoint.routing === "local" ? localStatus : remoteStatus;
-  const showWebSocketCallout = selectedWsStatus !== "online";
+  useEffect(() => {
+    if (route !== ROUTES.SESSION) {
+      return;
+    }
+    const runCheck = () => {
+      checkHealth(port).catch(() => undefined);
+    };
+    runCheck();
+    const interval = setInterval(runCheck, SERVER_CHECK_INTERVAL_MS);
+    checkIntervalRef.current = interval;
+
+    const retryIfOffline = setInterval(() => {
+      if (sessionStore.serverStatus === "offline") {
+        runCheck();
+      }
+    }, OFFLINE_RETRY_MS);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(retryIfOffline);
+      checkIntervalRef.current = null;
+    };
+  }, [route, port]);
 
   const blockVariant = (() => {
-    if (status === "disconnected") {
-      return "notConnected";
+    if (status === "disconnected" || status === "connecting") {
+      return "disconnected";
     }
     if (sessionsCount > 1) {
       return "multiple";
@@ -61,10 +103,6 @@ export default function SessionScreen({
     if (sessionId) {
       copyToClipboard(sessionId);
     }
-  };
-
-  const handleFixWebSocket = () => {
-    navigate(ROUTES.WEBSOCKET);
   };
 
   const gradientStyles = tv({
@@ -107,7 +145,7 @@ export default function SessionScreen({
 
   return (
     <Activity mode={route === ROUTES.SESSION ? "visible" : "hidden"}>
-      <section className="relative mt-4 flex h-fit w-full overflow-hidden">
+      <section className="relative mt-4 flex h-fit w-full cursor-default">
         <Gradient
           className="flex h-fit w-full shrink-0 grow flex-col gap-4"
           direction="bottom"
@@ -121,7 +159,7 @@ export default function SessionScreen({
           </Gradient>
 
           <div className="flex flex-col gap-4 px-3">
-            {blockVariant === "notConnected" && (
+            {blockVariant === "disconnected" && (
               <div className="flex flex-col gap-2">
                 <p className={textBodyStyles({ status })}>
                   Connect to get started.
@@ -137,7 +175,7 @@ export default function SessionScreen({
               </div>
             )}
 
-            {blockVariant === "single" && (
+            {blockVariant === "single" && status === "connected" && (
               <div className="flex flex-col gap-2">
                 <p className={textBodyStyles({ status })}>
                   You're all set — open your AI client and start working with
@@ -195,19 +233,20 @@ export default function SessionScreen({
               </div>
             )}
 
-            {showWebSocketCallout && (
-              <Callout title=" " tone="error">
-                <p>
-                  Please specify at least one active WebSocket so that the
-                  plugin can connect to it.
-                </p>
-                <Button
-                  onClick={handleFixWebSocket}
-                  tone="error"
-                  variant="alpha"
-                >
-                  Fix
-                </Button>
+            {serverStatus === "offline" && (
+              <Callout title="MCP server is not running" tone="warning">
+                <div className="flex flex-col gap-y-1">
+                  <p>Common mistakes:</p>
+                  <ul className="flex list-none flex-col gap-y-1 font-normal [&_li::before]:content-['•\00a0']">
+                    <li>
+                      You have not added the server configuration to the client.
+                    </li>
+                    <li>You specified the wrong port.</li>
+                    <li>
+                      The port you specified is in use by another process.
+                    </li>
+                  </ul>
+                </div>
               </Callout>
             )}
 

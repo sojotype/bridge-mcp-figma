@@ -1,92 +1,61 @@
 import { Tooltip } from "@base-ui/react/tooltip";
-import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
-import { useSnapshot } from "valtio";
 import { ROUTES } from "../../routes";
-import { endpointsStore } from "../../stores/endpoints";
 import { useSession } from "../../stores/session";
+import { BackButton } from "../shared/back-button";
 import { Button } from "../ui/button";
-import { Callout } from "../ui/callout";
 import { Icon } from "../ui/icon";
-import { Link } from "../ui/link";
-import { TabButton } from "../ui/tab-button";
+import { TabButton } from "../ui/tab";
 
 interface HeaderProps {
-  pathname: string;
   route: keyof typeof ROUTES;
 }
 
-export default function Header({ pathname, route }: HeaderProps) {
+function ErrorHeader() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const fromError = (location.state as { fromError?: boolean } | null)
-    ?.fromError;
-  const isTargetRoute = route === ROUTES.ROOT || route === ROUTES.WEBSOCKET;
+
+  return (
+    <header className="absolute top-0 right-0 left-0 flex w-full flex-col">
+      <nav className="flex w-full justify-end px-3 pt-3">
+        <Button
+          className="rounded"
+          iconName="infoCircle"
+          onClick={() => navigate(ROUTES.ABOUT, { state: { fromError: true } })}
+          showIcon
+          showLabel={false}
+          variant="alpha"
+        >
+          About
+        </Button>
+      </nav>
+    </header>
+  );
+}
+
+function ErrorAboutHeader() {
+  const navigate = useNavigate();
+
+  return (
+    <header className="flex w-full flex-col">
+      <nav className="flex w-full justify-end px-3 pt-3">
+        <BackButton
+          className="rounded"
+          onClick={() => navigate(-1)}
+          variant="alpha"
+        />
+      </nav>
+    </header>
+  );
+}
+
+function MainHeader({ route }: { route: keyof typeof ROUTES }) {
+  const navigate = useNavigate();
   const { status } = useSession();
-  const snap = useSnapshot(endpointsStore);
-  const selectedWsStatus = snap.websocket.status[snap.websocket.routing];
-  const isWsActive = selectedWsStatus === "online";
-  const showRemoteCallout =
-    snap.mcp.status.remote === "offline" ||
-    snap.mcp.status.remote === "warning" ||
-    snap.websocket.status.remote === "offline" ||
-    snap.websocket.status.remote === "warning";
 
-  const showCalloutOnScreen =
-    route === ROUTES.ROOT ||
-    route === ROUTES.WEBSOCKET ||
-    route === ROUTES.SESSION;
-
-  const [isCollapsed, setIsCollapsed] = useState(!isTargetRoute);
-  const prevTargetRef = useRef(isTargetRoute);
-
-  useEffect(() => {
-    if (prevTargetRef.current && !isTargetRoute) {
-      setIsCollapsed(true);
-    } else if (!prevTargetRef.current && isTargetRoute) {
-      setIsCollapsed(false);
-    }
-    prevTargetRef.current = isTargetRoute;
-  }, [isTargetRoute]);
-
-  if (pathname === "/loading") {
-    return null;
-  }
-
-  if (pathname === "/error") {
-    return (
-      <header className="absolute top-0 right-0 left-0 flex w-full flex-col">
-        <nav className="flex w-full justify-end px-3 pt-3">
-          <Button
-            className="rounded"
-            iconName="infoCircle"
-            onClick={() =>
-              navigate(ROUTES.ABOUT, { state: { fromError: true } })
-            }
-            showIcon
-            showLabel={false}
-            variant="alpha"
-          />
-        </nav>
-      </header>
-    );
-  }
-
-  if (pathname === ROUTES.ABOUT && fromError) {
-    return (
-      <header className="flex w-full flex-col">
-        <nav className="flex w-full justify-end px-3 pt-3">
-          <Button
-            className="rotate-180 rounded"
-            iconName="caretRight"
-            onClick={() => navigate(-1)}
-            showIcon
-            variant="alpha"
-          />
-        </nav>
-      </header>
-    );
-  }
+  const sessionTabLabel =
+    status === "connected" && route !== ROUTES.SESSION && route !== ROUTES.MINI
+      ? "Connected"
+      : "Session";
 
   return (
     <header className="flex w-full flex-col">
@@ -94,21 +63,12 @@ export default function Header({ pathname, route }: HeaderProps) {
         <Tooltip.Provider delay={500} timeout={500}>
           <div className="flex items-center gap-1">
             <TabButton
-              active={route === ROUTES.ROOT}
+              active={route === ROUTES.SETUP}
               iconName="mcp"
-              onClick={() => navigate(ROUTES.ROOT)}
-              tooltip="MCP"
-            />
-            <Icon
-              className="size-3 shrink-0 text-neutral-a-10"
-              name="caretRight"
-            />
-            <TabButton
-              active={route === ROUTES.WEBSOCKET}
-              iconName={isWsActive ? "globe" : "globeX"}
-              onClick={() => navigate(ROUTES.WEBSOCKET)}
-              tooltip="WebSocket"
-            />
+              onClick={() => navigate(ROUTES.SETUP)}
+            >
+              Setup
+            </TabButton>
             <Icon
               className="size-3 shrink-0 text-neutral-a-10"
               name="caretRight"
@@ -119,8 +79,9 @@ export default function Header({ pathname, route }: HeaderProps) {
                 status === "connected" ? "plugsConnected" : "plugsDisconnected"
               }
               onClick={() => navigate(ROUTES.SESSION)}
-              tooltip="Session"
-            />
+            >
+              {sessionTabLabel}
+            </TabButton>
           </div>
           <div className="flex items-center gap-2">
             <TabButton
@@ -138,39 +99,30 @@ export default function Header({ pathname, route }: HeaderProps) {
           </div>
         </Tooltip.Provider>
       </nav>
-      {showRemoteCallout && showCalloutOnScreen && (
-        <Callout
-          className="mx-3 mt-3"
-          collapsed={isCollapsed}
-          collapsible
-          iconNameOverride="warningTriangle"
-          onCollapsedChange={setIsCollapsed}
-          title="Official Remote service is not available now"
-          tone="neutral"
-        >
-          <p>
-            Run it{" "}
-            <Link
-              href="https://github.com/sojotype/bridge-mcp-figma#readme"
-              rel="noreferrer"
-              target="_blank"
-              tone="primary"
-            >
-              locally
-            </Link>{" "}
-            or{" "}
-            <Link
-              href="https://github.com/sojotype/bridge-mcp-figma#readme"
-              rel="noreferrer"
-              target="_blank"
-              tone="primary"
-            >
-              deploy
-            </Link>{" "}
-            your own service.
-          </p>
-        </Callout>
-      )}
     </header>
   );
+}
+
+export default function Header({ route }: HeaderProps) {
+  const location = useLocation();
+  const fromError = (location.state as { fromError?: boolean } | null)
+    ?.fromError;
+
+  if (route === ROUTES.LOADING) {
+    return null;
+  }
+
+  if (route === ROUTES.DUPLICATED) {
+    return null;
+  }
+
+  if (route === ROUTES.ERROR) {
+    return <ErrorHeader />;
+  }
+
+  if (route === ROUTES.ABOUT && fromError) {
+    return <ErrorAboutHeader />;
+  }
+
+  return <MainHeader route={route} />;
 }

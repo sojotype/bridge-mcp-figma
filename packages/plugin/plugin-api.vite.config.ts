@@ -6,21 +6,13 @@ const root = resolve(import.meta.dirname, "../..");
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, root, "");
 
-  const mcpLocalUrl = env.MCP_LOCAL_URL ?? "http://localhost:3000/mcp";
-  const mcpRemoteUrl = env.MCP_REMOTE_URL ?? "https://your-mcp.example.com/mcp";
-  const websocketLocalUrl = env.WEBSOCKET_LOCAL_URL ?? "http://localhost:1999";
-  const websocketRemoteUrl =
-    env.WEBSOCKET_REMOTE_URL ??
-    "https://your-websocket.example.com/party/websocket";
+  const websocketPort = Number.parseInt(env.WEBSOCKET_PORT, 10) || 8766;
   const userHashSalt = env.USER_HASH_SALT ?? "figma-mcp-bridge-v1";
 
   return {
     root: pluginRoot,
     define: {
-      __MCP_LOCAL_URL__: JSON.stringify(mcpLocalUrl),
-      __MCP_REMOTE_URL__: JSON.stringify(mcpRemoteUrl),
-      __WEBSOCKET_LOCAL_URL__: JSON.stringify(websocketLocalUrl),
-      __WEBSOCKET_REMOTE_URL__: JSON.stringify(websocketRemoteUrl),
+      __WEBSOCKET_PORT__: JSON.stringify(websocketPort),
       __USER_HASH_SALT__: JSON.stringify(userHashSalt),
     },
     build: {

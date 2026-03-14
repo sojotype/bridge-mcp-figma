@@ -1,27 +1,16 @@
 import { proxy, subscribe, useSnapshot } from "valtio";
-import type { StoredEndpoints } from "../../lib/events";
 import { frontendBroker } from "../lib/frontend-broker";
-import { endpointsStore } from "./endpoints";
 
-function toStoredEndpoints(): StoredEndpoints {
-  return {
-    mcp: {
-      routing: endpointsStore.mcp.routing,
-      user: { ...endpointsStore.mcp.user },
-    },
-    websocket: {
-      routing: endpointsStore.websocket.routing,
-      user: { ...endpointsStore.websocket.user },
-    },
-  };
-}
-
-interface SettingsState {
-  persistSettings: boolean;
+export interface SettingsState {
+  defaultPort: number;
+  userPort: number | null;
+  owner: "default" | "user";
 }
 
 export const settingsStore = proxy<SettingsState>({
-  persistSettings: true,
+  defaultPort: Number.parseInt(__WEBSOCKET_PORT__, 10) ?? 8766,
+  userPort: null,
+  owner: "default",
 });
 
 let isListening = false;
@@ -33,31 +22,37 @@ function ensureSettingsListener() {
   isListening = true;
 
   frontendBroker.on("initialSettings", (data) => {
-    if (data?.persistSettings !== undefined) {
-      settingsStore.persistSettings = data.persistSettings;
-    }
-    const endpoints = data?.endpoints as StoredEndpoints | undefined;
-    if (endpoints) {
-      endpointsStore.mcp.routing = endpoints.mcp.routing;
-      endpointsStore.mcp.user = endpoints.mcp.user;
-      endpointsStore.websocket.routing = endpoints.websocket.routing;
-      endpointsStore.websocket.user = endpoints.websocket.user;
+    const userPort = (data as { userPort?: number })?.userPort;
+    if (typeof userPort === "number" && Number.isFinite(userPort)) {
+      settingsStore.userPort = userPort;
+      settingsStore.owner = "user";
     }
   });
 
-  frontendBroker.on("persistSettings", (data) => {
-    const d = data as { persistSettings?: boolean };
-    if (d?.persistSettings !== undefined) {
-      settingsStore.persistSettings = d.persistSettings;
+  subscribe(settingsStore, () => {
+    if (settingsStore.owner === "user") {
+      const port = settingsStore.userPort ?? settingsStore.defaultPort;
+      frontendBroker.post("saveUserPort", { port });
+    } else {
+      frontendBroker.post("saveUserPort", { port: null });
     }
-  });
-
-  subscribe(endpointsStore, () => {
-    frontendBroker.post("saveEndpoints", toStoredEndpoints());
   });
 }
 
 export function useSettings() {
   ensureSettingsListener();
-  return useSnapshot(settingsStore);
+  const snap = useSnapshot(settingsStore);
+  return {
+    port: snap.userPort ?? snap.defaultPort,
+    defaultPort: snap.defaultPort,
+    owner: snap.owner,
+    resetPort: () => {
+      settingsStore.userPort = null;
+      settingsStore.owner = "default";
+    },
+    setPort: (nextPort: number) => {
+      settingsStore.userPort = nextPort;
+      settingsStore.owner = "user";
+    },
+  };
 }

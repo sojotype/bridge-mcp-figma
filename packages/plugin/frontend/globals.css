@@ -4,6 +4,13 @@
 /* Tailwind 4: dark mode by Figma theme class (not prefers-color-scheme) */
 @custom-variant dark (&:where(.figma-dark, .figma-dark *));
 
+.focus-outline:focus-visible {
+  outline-width: 2px;
+  outline-offset: 2px;
+  outline-color: var(--color-primary-9);
+  outline-style: solid;
+}
+
 @theme {
   /* Colors */
   --color-*: initial;

@@ -33,20 +33,20 @@
         "@figma/plugin-typings": "*",
       },
     },
-    "packages/mcp-server": {
-      "name": "bridge-mcp-figma/mcp-server",
+    "packages/mcp": {
+      "name": "bridge-mcp-figma",
+      "version": "0.0.1",
+      "bin": {
+        "bridge-mcp-figma": "./dist/index.js",
+      },
       "dependencies": {
         "@bridge-mcp-figma/api": "workspace:*",
-        "mcp-handler": "1.0.7",
-        "nanoid": "^5.1.6",
-        "next": "16.1.6",
-        "react": "19.2.4",
-        "react-dom": "19.2.4",
+        "@modelcontextprotocol/sdk": "1.25.2",
+        "ws": "^8.18.0",
         "zod": "4.3.6",
       },
       "devDependencies": {
-        "@tailwindcss/postcss": "4.2.1",
-        "babel-plugin-react-compiler": "1.0.0",
+        "typescript": "5.9.3",
       },
     },
     "packages/plugin": {
@@ -56,7 +56,6 @@
         "@bridge-mcp-figma/api": "workspace:*",
         "animejs": "^4.3.6",
         "motion": "^12.34.3",
-        "nanoid": "^5.1.6",
         "partysocket": "1.1.16",
         "react": "19.2.4",
         "react-dom": "19.2.4",
@@ -74,6 +73,21 @@
         "postcss-functions": "^4.0.2",
         "vite": "npm:rolldown-vite@latest",
         "vite-plugin-singlefile": "2.3.0",
+      },
+    },
+    "packages/site": {
+      "name": "bridge-mcp-figma/mcp-server",
+      "dependencies": {
+        "@bridge-mcp-figma/api": "workspace:*",
+        "mcp-handler": "1.0.7",
+        "next": "16.1.6",
+        "react": "19.2.4",
+        "react-dom": "19.2.4",
+        "zod": "4.3.6",
+      },
+      "devDependencies": {
+        "@tailwindcss/postcss": "4.2.1",
+        "babel-plugin-react-compiler": "1.0.0",
       },
     },
     "packages/websocket": {
@@ -503,7 +517,9 @@
 
     "braces": ["braces@3.0.3", "", { "dependencies": { "fill-range": "^7.1.1" } }, "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA=="],
 
-    "bridge-mcp-figma/mcp-server": ["bridge-mcp-figma/mcp-server@workspace:packages/mcp-server"],
+    "bridge-mcp-figma": ["bridge-mcp-figma@workspace:packages/mcp"],
+
+    "bridge-mcp-figma/mcp-server": ["bridge-mcp-figma/mcp-server@workspace:packages/site"],
 
     "bridge-mcp-figma/plugin": ["bridge-mcp-figma/plugin@workspace:packages/plugin"],
 
@@ -817,7 +833,7 @@
 
     "nano-spawn": ["nano-spawn@2.0.0", "", {}, "sha512-tacvGzUY5o2D8CBh2rrwxyNojUsZNU2zjNTzKQrkgGJQTbGAfArVWXSKMBokBeeg6C7OLRGUEyoFlYbfeWQIqw=="],
 
-    "nanoid": ["nanoid@5.1.6", "", { "bin": { "nanoid": "bin/nanoid.js" } }, "sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg=="],
+    "nanoid": ["nanoid@3.3.11", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w=="],
 
     "negotiator": ["negotiator@1.0.0", "", {}, "sha512-8Ofs/AUQh8MaEcrlq5xOX0CQ9ypTF5dl78mjlMNfOK08fzpgTHQRQPBxcPlEtIw0yRpws+Zo/3r+5WRby7u3Gg=="],
 
@@ -1115,8 +1131,6 @@
 
     "npm-run-path/path-key": ["path-key@4.0.0", "", {}, "sha512-haREypq7xkM7ErfgIyA0z+Bj4AGKlMSdlQE2jvJo6huWD1EdkKYV+G/T4nq0YEF2vgTT8kqMFKo1uHn950r4SQ=="],
 
-    "postcss/nanoid": ["nanoid@3.3.11", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w=="],
-
     "restore-cursor/onetime": ["onetime@7.0.0", "", { "dependencies": { "mimic-function": "^5.0.0" } }, "sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ=="],
 
     "rolldown/@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.0-beta.53", "", {}, "sha512-vENRlFU4YbrwVqNDZ7fLvy+JR1CRkyr01jhSiDpE1u6py3OMzQfztQU2jxykW3ALNxO4kSlqIDeYyD0Y9RcQeQ=="],
@@ -1142,8 +1156,6 @@
     "cli-truncate/string-width/strip-ansi": ["strip-ansi@7.1.2", "", { "dependencies": { "ansi-regex": "^6.0.1" } }, "sha512-gmBGslpoQJtgnMAvOVqGZpEz9dyoKTCzy2nfz/n8aIFhN/jCE/rCmcxabB6jOOHV+0WNnylOxaxBQPSvcWklhA=="],
 
     "log-update/strip-ansi/ansi-regex": ["ansi-regex@6.2.2", "", {}, "sha512-Bq3SmSpyFHaWjPk8If9yc6svM8c56dB5BAtW4Qbw5jHTwwXXcTLoRMkpDJp6VL0XzlWaCHTXrkFURMYmD0sLqg=="],
-
-    "next/postcss/nanoid": ["nanoid@3.3.11", "", { "bin": { "nanoid": "bin/nanoid.cjs" } }, "sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w=="],
 
     "wrap-ansi/string-width/emoji-regex": ["emoji-regex@10.6.0", "", {}, "sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A=="],
 

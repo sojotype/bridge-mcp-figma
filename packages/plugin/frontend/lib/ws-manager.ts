@@ -6,13 +6,15 @@
 import { sessionStore } from "../stores/session";
 import { frontendBroker } from "./frontend-broker";
 
-function buildWsUrl(hostOrUrl: string, room: string): string {
-  const normalized = hostOrUrl.startsWith("http")
-    ? hostOrUrl
-    : `https://${hostOrUrl}`;
-  const u = new URL(normalized);
-  const protocol = u.protocol === "https:" ? "wss" : "ws";
-  return `${protocol}://${u.host}/parties/websocket/${room}`;
+function getWsUrl(hostOrUrl: string): string {
+  if (hostOrUrl.startsWith("ws://") || hostOrUrl.startsWith("wss://")) {
+    return hostOrUrl;
+  }
+  if (hostOrUrl.startsWith("http")) {
+    const u = new URL(hostOrUrl);
+    return u.protocol === "https:" ? `wss://${u.host}` : `ws://${u.host}`;
+  }
+  return `ws://${hostOrUrl}`;
 }
 
 let ws: WebSocket | null = null;
@@ -43,6 +45,9 @@ function setupListeners(): void {
   };
 
   const handleClose = () => {
+    if (sessionStore.status === "connecting") {
+      sessionStore.error = "Connection failed";
+    }
     cleanup();
     frontendBroker.post("wsClosed");
     sessionStore.status = "disconnected";
@@ -54,14 +59,20 @@ function setupListeners(): void {
   };
 }
 
+frontendBroker.on("closeSocket", () => {
+  cleanup();
+  sessionStore.status = "disconnected";
+  frontendBroker.post("wsClosed");
+});
+
 frontendBroker.on("connect", (data) => {
-  const { host, room } = (data ?? {}) as { host?: string; room?: string };
-  if (!(host && room)) {
+  const { host } = (data ?? {}) as { host?: string };
+  if (!host) {
     return;
   }
   cleanup();
   sessionStore.status = "connecting";
-  const url = buildWsUrl(host, room);
+  const url = getWsUrl(host);
   ws = new WebSocket(url);
   setupListeners();
 });
@@ -85,5 +96,8 @@ export const wsManager = {
 
 // Explicit close on plugin unload (e.g. rebuild, close UI) so server receives close frame
 if (typeof window !== "undefined") {
-  window.addEventListener("pagehide", () => wsManager.close());
+  window.addEventListener("pagehide", () => {
+    frontendBroker.post("pluginClosing");
+    wsManager.close();
+  });
 }

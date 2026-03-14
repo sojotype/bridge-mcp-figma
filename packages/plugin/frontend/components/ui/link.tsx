@@ -13,9 +13,9 @@ export interface LinkProps
 
 const link = tv({
   base: [
-    "inline-flex items-center gap-1 text-body underline-offset-2",
+    "focus-outline inline-flex cursor-pointer items-center gap-1 rounded-[2px] text-body underline-offset-2",
     "transition-[color,text-decoration-color] duration-300 ease-out hover:transition-none",
-    "cursor-default hover:underline",
+    "hover:underline",
   ].join(" "),
   variants: {
     tone: {

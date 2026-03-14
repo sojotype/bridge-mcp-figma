@@ -3,17 +3,17 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { tv } from "../../lib/tv";
-import { Icon } from "./icon";
 
-export interface InputProps {
+export interface PortInputProps {
   id?: string;
   value: string;
   owner: "user" | "default";
-  defaultValue?: string;
-  error?: string | null;
-  onBlur?: () => void;
+  placeholder?: string;
+  type?: "text" | "number";
+  min: number;
+  max: number;
+  maxLength: number;
   onValueChange?: (value: string) => void;
-  onSubmit?: (value: string) => void;
   onReset?: () => void;
   className?: string;
 }
@@ -29,19 +29,18 @@ const field = tv({
     "focus-within:shadow-[0_0_0_1px_var(--color-primary-8)_inset] hover:shadow-[0_0_0_1px_var(--color-neutral-a-6)_inset] hover:transition-none focus-within:hover:shadow-[0_0_0_1px_var(--color-primary-8)_inset]",
     "transition-[box-shadow,background-color] duration-300 ease-out",
   ].join(" "),
-  variants: {
-    hasError: {
-      true: "bg-error-2 shadow-[0_0_0_1px_var(--color-error-8)_inset] focus-within:shadow-[0_0_0_1px_var(--color-error-8)_inset] hover:shadow-[0_0_0_1px_var(--color-error-8)_inset] focus-within:hover:shadow-[0_0_0_1px_var(--color-error-8)_inset]",
-    },
-  },
 });
 
-const inputStyles =
-  "pl-2 flex-1 bg-transparent text-body text-neutral-11 placeholder:text-neutral-10 outline-none";
+const inputStyles = tv({
+  base: "flex-1 bg-transparent pl-2 text-body text-neutral-11 outline-none placeholder:text-neutral-10",
+});
+
+const numberInputStyles =
+  "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
 const buttonStyles = tv({
   base: [
-    "ml-1 flex h-5 items-center overflow-hidden rounded-[2px] bg-neutral-4 text-caption font-medium text-neutral-10",
+    "focus-outline ml-1 flex h-5 items-center overflow-hidden rounded-[2px] bg-neutral-4 text-caption font-medium text-neutral-10",
     "hover:shadow-[0_0_0_1px_var(--color-neutral-a-4)_inset]",
     "transition-[background-color,color] duration-150 ease-out",
   ],
@@ -53,10 +52,6 @@ const buttonStyles = tv({
     interactive: {
       true: "",
       false: "pointer-events-none",
-    },
-    hasError: {
-      true: "bg-error-4 text-error-10 hover:shadow-[0_0_0_1px_var(--color-error-a-4)_inset]",
-      false: "",
     },
   },
 });
@@ -85,7 +80,7 @@ function getUserLabel(isHovered: boolean, isButtonFocused: boolean): UserLabel {
 }
 
 function getInputStateLabel(
-  owner: InputProps["owner"],
+  owner: PortInputProps["owner"],
   isHovered: boolean,
   isButtonFocused: boolean
 ): InputStateLabel {
@@ -143,7 +138,7 @@ function InputState({
   isHovered,
   isButtonFocused,
 }: {
-  owner: InputProps["owner"];
+  owner: PortInputProps["owner"];
   isHovered: boolean;
   isButtonFocused: boolean;
 }) {
@@ -198,23 +193,23 @@ function InputState({
   );
 }
 
-export const Input = ({
+export const PortInput = ({
   value,
   owner,
-  defaultValue = "",
-  error: errorProp,
-  onBlur,
+  placeholder = "",
+  type = "text",
+  min,
+  max,
+  maxLength,
   onValueChange,
-  onSubmit,
   onReset,
   id,
   className,
-}: InputProps) => {
+}: PortInputProps) => {
   const generatedId = useId().replace(/:/g, "");
   const inputId = id ?? generatedId;
 
   const [draft, setDraft] = useState(value);
-  const [committedValue, setCommittedValue] = useState(value);
   const [isHovered, setIsHovered] = useState(false);
   const [isButtonFocused, setIsButtonFocused] = useState(false);
   const isMirroringLocalChangeRef = useRef(false);
@@ -224,41 +219,39 @@ export const Input = ({
 
     if (isMirroringLocalChangeRef.current) {
       isMirroringLocalChangeRef.current = false;
-      return;
     }
-
-    setCommittedValue(value);
   }, [value]);
 
-  const isDirty = draft !== committedValue;
   const isButtonInteractive = owner === "user";
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const next = event.target.value;
+    let next = event.target.value;
+
+    if (next.length > maxLength) {
+      next = next.slice(0, maxLength);
+    }
+
+    if (type === "number" && next !== "") {
+      const parsed = Number(next);
+
+      if (!Number.isNaN(parsed)) {
+        let bounded = parsed;
+
+        if (typeof max === "number") {
+          bounded = Math.min(bounded, max);
+        }
+
+        if (typeof min === "number") {
+          bounded = Math.max(bounded, min);
+        }
+
+        next = String(bounded);
+      }
+    }
+
     setDraft(next);
     isMirroringLocalChangeRef.current = true;
     onValueChange?.(next);
-  };
-
-  const trySubmit = (nextValue = draft) => {
-    if (nextValue === committedValue) {
-      return;
-    }
-    setDraft(nextValue);
-    setCommittedValue(nextValue);
-    onSubmit?.(nextValue);
-  };
-
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      trySubmit(event.currentTarget.value);
-    }
-  };
-
-  const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-    trySubmit(event.currentTarget.value);
-    onBlur?.();
   };
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
@@ -272,36 +265,28 @@ export const Input = ({
     }
   };
 
-  const showEnterKey = isDirty;
-
-  const hasError = !!errorProp;
-
   return (
     <div className={twMerge(root({}), className)}>
-      <label className={field({ hasError })} htmlFor={inputId}>
+      <label className={field()} htmlFor={inputId}>
         <input
-          aria-invalid={hasError ? true : undefined}
-          className={inputStyles}
+          className={twMerge(
+            inputStyles(),
+            type === "number" && numberInputStyles
+          )}
           id={inputId}
-          onBlur={handleBlur}
+          max={max}
+          maxLength={maxLength}
+          min={min}
           onChange={handleChange}
           onFocus={handleFocus}
-          onKeyDown={handleKeyDown}
-          placeholder={defaultValue}
+          placeholder={placeholder}
+          type={type}
           value={draft}
         />
-        {showEnterKey ? (
-          <Icon
-            aria-hidden
-            className="size-4 text-neutral-7"
-            focusable="false"
-            name="enterKey"
-          />
-        ) : null}
+
         <motion.button
           className={twMerge([
             buttonStyles({
-              hasError,
               variant: isButtonInteractive ? "user" : "default",
               interactive: isButtonInteractive,
             }),

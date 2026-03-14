@@ -1,13 +1,21 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type {
+  AnchorHTMLAttributes,
+  ButtonHTMLAttributes,
+  ReactNode,
+} from "react";
 import { tv } from "../../lib/tv";
 import { Icon, type IconName } from "./icon";
+import { Tooltip } from "./tooltip";
 
 type ButtonVariant = "solid" | "alpha";
 
 type ButtonTone = "neutral" | "primary" | "success" | "error";
 
 export interface ButtonProps
-  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
+  extends Omit<
+    ButtonHTMLAttributes<HTMLButtonElement>,
+    "children" | "aria-label"
+  > {
   variant?: ButtonVariant;
   tone?: ButtonTone;
   iconName?: IconName;
@@ -15,15 +23,18 @@ export interface ButtonProps
   showLabel?: boolean;
   children?: ReactNode;
   className?: string;
+  /** Default "button". Use "a" for links (requires href). */
+  as?: "button" | "a";
+  href?: string;
+  rel?: string;
 }
 
 const button = tv({
   base: [
-    "inline-flex h-7 items-center justify-center gap-1.5 px-3",
+    "focus-outline inline-flex h-7 items-center justify-center gap-1.5 px-3",
     "rounded-[4px] text-body font-medium",
     "transition-[background-color] duration-300 ease-out",
     "hover:transition-none",
-    "focus-visible:ring-1 focus-visible:ring-primary-8 focus-visible:outline-none",
     "disabled:cursor-not-allowed disabled:opacity-70",
   ].join(" "),
   variants: {
@@ -43,7 +54,6 @@ const button = tv({
     },
   },
   compoundVariants: [
-    // Solid buttons (filled)
     {
       variant: "solid",
       tone: "neutral",
@@ -67,8 +77,6 @@ const button = tv({
       tone: "error",
       class: "bg-error-7 text-neutral-12 hover:bg-error-8 active:bg-error-6",
     },
-
-    // Alpha buttons (tinted backgrounds)
     {
       variant: "alpha",
       tone: "neutral",
@@ -105,18 +113,24 @@ export const Button = ({
   tone = "neutral",
   iconName = "copy",
   showIcon = false,
+  showLabel: showLabelProp,
   children,
   className,
+  as = "button",
   type = "button",
+  href,
+  rel,
   ...props
 }: ButtonProps) => {
-  const showLabel = children != null;
+  const showLabel = showLabelProp ?? children != null;
+  const useTooltip = !showLabel && children != null;
+  const isLink = as === "a";
 
-  return (
-    <button
-      className={button({ variant, tone, showLabel, className })}
-      {...props}
-    >
+  const accessibleName =
+    !showLabel && typeof children === "string" ? children : undefined;
+
+  const content = (
+    <>
       {showIcon && (
         <Icon
           aria-hidden
@@ -126,6 +140,39 @@ export const Button = ({
         />
       )}
       {showLabel && <span className="truncate">{children}</span>}
+    </>
+  );
+
+  const ariaLabelAttr =
+    typeof accessibleName === "string" && accessibleName
+      ? { "aria-label": accessibleName }
+      : undefined;
+
+  const element = isLink ? (
+    <a
+      className={button({ variant, tone, showLabel, className })}
+      href={href}
+      rel={rel ?? "noreferrer"}
+      target="_blank"
+      {...(ariaLabelAttr ?? {})}
+      {...(props as AnchorHTMLAttributes<HTMLAnchorElement>)}
+    >
+      {content}
+    </a>
+  ) : (
+    <button
+      className={button({ variant, tone, showLabel, className })}
+      type={type as "button" | "submit" | "reset"}
+      {...(ariaLabelAttr ?? {})}
+      {...(props as ButtonHTMLAttributes<HTMLButtonElement>)}
+    >
+      {content}
     </button>
   );
+
+  if (useTooltip) {
+    return <Tooltip content={children}>{element}</Tooltip>;
+  }
+
+  return element;
 };

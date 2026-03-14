@@ -2,12 +2,14 @@ import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { frontendBroker } from "../../lib/frontend-broker";
 import { ROUTES } from "../../routes";
+import { sessionStore, useSession } from "../../stores/session";
 
 const VALID_ROUTES = new Set(Object.values(ROUTES));
-const UNSAVED_ROUTES = new Set(["/loading", "/error"]);
+const UNSAVED_ROUTES = new Set(["/loading", "/error", ROUTES.DUPLICATED]);
 const LOADING_DELAY_MS = 500;
 
 export function RoutePersistence() {
+  useSession(); // Ensures session store listens for duplicateSessionServer
   const navigate = useNavigate();
   const location = useLocation();
   const readyToSaveRef = useRef(false);
@@ -24,7 +26,9 @@ export function RoutePersistence() {
         !didNavigateRef.current &&
         location.pathname === "/loading"
       ) {
-        const target = initialTargetRef.current ?? ROUTES.ROOT;
+        const target = sessionStore.duplicateSessionServer
+          ? ROUTES.DUPLICATED
+          : (initialTargetRef.current ?? ROUTES.SETUP);
         didNavigateRef.current = true;
         navigate(target);
       }
@@ -36,7 +40,7 @@ export function RoutePersistence() {
     return frontendBroker.on("initialSettings", (data) => {
       const lastScreen = (data as { lastScreen?: string })?.lastScreen;
       const target =
-        lastScreen && VALID_ROUTES.has(lastScreen) ? lastScreen : ROUTES.ROOT;
+        lastScreen && VALID_ROUTES.has(lastScreen) ? lastScreen : ROUTES.SETUP;
       initialTargetRef.current = target;
       hasInitialSettingsRef.current = true;
       readyToSaveRef.current = true;
@@ -46,8 +50,11 @@ export function RoutePersistence() {
         !didNavigateRef.current &&
         location.pathname === "/loading"
       ) {
+        const effectiveTarget = sessionStore.duplicateSessionServer
+          ? ROUTES.DUPLICATED
+          : target;
         didNavigateRef.current = true;
-        navigate(target);
+        navigate(effectiveTarget);
       }
     });
   }, [navigate, location.pathname]);
@@ -66,6 +73,18 @@ export function RoutePersistence() {
     return frontendBroker.on("error", (data) => {
       const error = (data as { error?: string })?.error ?? "Unknown error";
       navigate("/error", { state: { error } });
+    });
+  }, [navigate]);
+
+  useEffect(() => {
+    return frontendBroker.on("duplicateSessionServer", () => {
+      navigate(ROUTES.DUPLICATED);
+    });
+  }, [navigate]);
+
+  useEffect(() => {
+    return frontendBroker.on("takeOverComplete", () => {
+      navigate(ROUTES.SESSION);
     });
   }, [navigate]);
 
