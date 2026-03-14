@@ -16,6 +16,10 @@ This project is **not** a REST backend. It is an event-driven bridge: MCP client
 | **mcp** | Stdio MCP server + embedded WebSocket. Run via `bunx bridge-mcp-figma`. Session registry for multi-tab. |
 | **site** | Next.js landing page only. No MCP routes. |
 
+## Package manager and runtime
+
+This repository uses **Bun** as the package manager and JavaScript runtime.
+
 ## Message passing pattern
 
 - **Plugin backend**: `backendBroker` receives messages; `handleMessage(tool, args)` dispatches to handlers. No HTTP routes.
