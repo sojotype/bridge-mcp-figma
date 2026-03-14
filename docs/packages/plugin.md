@@ -1,26 +1,77 @@
 # Package: plugin
 
-Figma plugin that runs inside Figma and talks to the bridge via WebSocket.
+Figma plugin: iframe frontend + main thread backend. Communicates with MCP via embedded WebSocket.
 
 ## Role
 
-- **Backend (main thread)**: Entry `backend/main.ts`. Does not connect automatically; waits for the user to trigger connection from the session screen. On connect, sends session metadata: **userHash** (obfuscated `figma.currentUser.id`), **fileRootId** (UUID in `figma.root` pluginData, key `C2F_file_UUID`), **user name** (`figma.currentUser.name`). On WebSocket message: `dispatch(tool, args)` → Figma API or composite handler → send `{ commandId, result }` or `{ commandId, error }` back.
-- **Frontend (UI iframe)**:
-  - Shows connection status.
-  - Shows **MCP config** for adding the server to the client (e.g. Cursor): URL with `userHashes` query param (e.g. `http://localhost:3000/mcp?userHashes=<userHash>`). User copies the config and pastes it into the MCP client. **userHash** is shown in the plugin UI after the user triggers a hash request (e.g. on the session screen).
-  - In **single-session mode** (only one active plugin session for this Figma user), the UI does **not** show any room/session identifier.
-  - In **multi-session mode** (PartyKit notifies that this user has more than one active session), the UI shows the current **room ID** (with `room_` prefix) and a copy button so the user can paste it into the chat; the agent recognizes `room_...` as the session target.
-  - **Design tokens** (colors, typography): canonical list in [frontend/TOKENS.md](../../packages/plugin/frontend/TOKENS.md); variables live in `frontend/globals.css`.
-- **Room ID**: Generated for each plugin instance (e.g. `room_` + UUID). Used as the PartyKit room name. **userHash** is sent in the register payload so PartyKit can maintain `userHash → [sessions]`.
+- **Backend (main thread)**: Entry `backend/main.ts`. Broker pattern: `backendBroker` receives messages, dispatches via `handleMessage(tool, args)` to handlers. No direct HTTP or WebSocket creation in backend.
+- **Frontend (UI iframe)**: Creates and manages WebSocket connection. All `figma.*` calls happen only in backend; frontend receives data via `frontendBroker` (postMessage).
+
+## Message passing pattern
+
+```
+MCP → WebSocket → Frontend → postMessage → Backend Broker → Handler → figma.*
+                                              ↓
+Frontend ← postMessage ← Result
+```
+
+- **Backend**: `backendBroker` receives messages; dispatches to handlers. No HTTP routes.
+- **Frontend**: Data from backend only via `frontendBroker`. No direct `figma.*` calls.
+- **Tool flow**: MCP → WebSocket → frontend → postMessage → backend → handler → `figma.*` → result back.
+
+## Connection model
+
+WebSocket lives **only in the plugin frontend**.
+
+1. **ready**: Backend sends ready signal to frontend.
+2. **connect**: Backend provides connection params (host = full ws URL) via `connect` message.
+3. **Frontend creates WebSocket**: Listens for `connect`, creates socket, forwards `send`.
+4. **Lifecycle events**: Frontend reports `wsOpened`, `wsMessage`, `wsClosed` to backend.
+5. **Disconnect**: Frontend calls `ws.close()` directly.
+
+Flow: `ready` → `connect` → [frontend creates WS] → `wsOpened` → `register` → `wsMessage`/`wsClosed`.
+
+## Single instance detection
+
+- Uses `figma.root.setSharedPluginData` / `getSharedPluginData` (shared across all users in file).
+- **Key**: `activeInstances` → `{ [userHash]: { sessionId, lastHeartbeat } }`
+- On `ready`: backend writes entry; starts heartbeat every 5–10s.
+- On mount: new instance checks shared data; if same `userHash` with recent heartbeat and different `sessionId` → shows warning screen immediately.
+- On close: removes entry (best-effort via `beforeunload`/`close`). Heartbeat stops → assumed dead after 30s.
+
+## Resource locks
+
+- **Storage**: `figma.root.setSharedPluginData(NAMESPACE, "locks", JSON.stringify(locks))`
+- **Resource groups**: `nodes`, `variables`, `styles`, `components`, `assets`
+- **Lock types**: Read (shared) or Write (exclusive).
+- **FIFO queue**: When lock released, next waiter acquires.
+
+See [2026-03-13-multi-agent-locks-single-instance](../decisions/2026-03-13-multi-agent-locks-single-instance.md).
 
 ## Entry points
 
 - **Figma main**: `backend/main.ts` (built as plugin API bundle; manifest points to it as `main`).
 - **UI**: `frontend/index.tsx` → `app.tsx`; output is inlined in `index.html` for the manifest.
 
+## Frontend UI
+
+- **Setup screen**: Configure connection (port, default/override).
+- **Session screen**: Connection status, health check, MCP config display.
+- **Warning screen**: Shown when duplicate instance detected (same user, same file).
+- **Design tokens**: Colors, typography in [frontend/TOKENS.md](../../packages/plugin/frontend/TOKENS.md); variables in `frontend/globals.css`.
+
+## Settings store
+
+Single source of truth for connection settings:
+- **State**: `defaultPort`, `userPort`, `owner`
+- **Actions**: `setPort`, `resetPort`
+- **Sync**: `initialSettings` hydrates from backend; subscribe → `saveUserPort` on change
+- **Hook**: `useSettings()` returns snapshot + actions
+
+See [2026-03-14-settings-store-refactor](../decisions/2026-03-14-settings-store-refactor.md).
+
 ## Dependencies
 
-- `partysocket`: WebSocket client to PartyKit.
 - `@figma/plugin-typings`: Figma API types (dev).
 
 ## Build
@@ -29,6 +80,6 @@ Figma plugin that runs inside Figma and talks to the bridge via WebSocket.
 
 ## Links
 
-- Sends/receives JSON: `{ commandId, tool, args }` and `{ commandId, result | error }`. See [architecture](../architecture.md).
-- Tool list and dispatch are aligned with [api](api.md) package (see [decisions/2025-02-22-imperative-tools-source-of-truth](../decisions/2025-02-22-imperative-tools-source-of-truth.md)).
+- Tool dispatch aligned with [api](api.md) package.
+- Architecture: [architecture.md](../architecture.md).
 - Session flow: [2026-02-23-figma-userid-session-flow](../decisions/2026-02-23-figma-userid-session-flow.md).

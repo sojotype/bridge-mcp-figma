@@ -2,64 +2,87 @@
 
 ## Overview
 
+Event-driven bridge: MCP client (stdio) → MCP package (embedded WebSocket) → Figma Plugin Frontend → Plugin Broker → Plugin Backend → figma.* API.
+
 ```
-Cursor (agent)  →  MCP client  →  MCP server (Next.js)  →  HTTP POST  →  PartyKit registry or websocket room
-                                                                              ↓
-Figma plugin  ←  WebSocket  ←  PartyKit websocket room (per session)
+Cursor (agent) → MCP client (stdio) → MCP server + embedded WS → Figma Plugin Frontend
+                                                                        ↓
+Figma Plugin Backend ← Plugin Broker ← postMessage
      ↓
 Figma Plugin API (figma.*)
 ```
 
-- **Session (room)**: User opens the plugin → plugin loads or creates a session ID (persisted per file in `figma.clientStorage`). The WebSocket connection is **not** established at startup; the user must navigate to the session screen and click Connect. On connect, the plugin sends a **userHash** (deterministic obfuscation of Figma user id), **fileRootId** (UUID in `figma.root` pluginData, key `C2F_file_UUID`), **userName** to the websocket room; the room registers with the **registry** party. Only one active session per (userHash, fileRootId) is allowed; a second tab for the same file gets a warning and retries periodically.
-- **Tool call**: Agent calls an MCP tool (with optional `sessionId`). MCP server reads **userHashes** from the request URL (`?userHashes=...`). If `sessionId` is provided, it POSTs to the websocket room; otherwise it POSTs to the **registry** with action `invoke`, which resolves the room by userHashes and forwards the command. PartyKit sends the command to the plugin; plugin runs the tool and replies; result returns to the agent.
+This is **not** a REST backend. All communication happens via message passing:
+- **MCP → Plugin**: WebSocket (embedded in MCP package)
+- **Frontend → Backend**: `postMessage` via `frontendBroker`/`backendBroker`
+- **Backend → figma.***: Direct Figma Plugin API calls
 
-## Identity and session flow
+## Packages and roles
 
-- **No separate authentication.** The user adds the MCP server by pasting a URL that includes **userHashes** (from the plugin UI). The plugin never sends the raw Figma user id over the network; it computes a deterministic **userHash** (obfuscation of `figma.currentUser.id`) and shows that in the config.
-- **Plugin on connect**: Connection is initiated by the user via a button on the session screen (not automatically at startup). Backend loads or creates **sessionId** per file from `figma.clientStorage`. When the user clicks Connect, the frontend opens a WebSocket to PartyKit and sends `{ type: "register", userHash, fileRootId, userName }`. The websocket server calls the **registry** (action `register`). The registry allows only one session per (userHash, fileRootId); if another tab already has a session for that pair, it returns 409 and the plugin shows “Active session in another tab” and retries every 30s.
-- **MCP**: Reads **userHashes** from the request URL (e.g. `http://localhost:3000/mcp?userHashes=abc123`). When a tool is invoked without `sessionId`, MCP calls the registry with action `invoke`; the registry resolves the room by userHashes and forwards the command. 0 sessions → error; 1 session → automatic; multiple sessions → error asking to pass `sessionId`.
+| Package | Role |
+|---------|------|
+| **api** | Single source of truth: Zod schemas, `ToolsParams` types. No runtime logic. |
+| **plugin** | Figma iframe (frontend) + main thread (backend). Backend: broker → handlers → figma.* |
+| **mcp** | Stdio MCP server + embedded WebSocket. Run via `bunx bridge-mcp-figma`. Session registry for multi-tab. |
+| **site** | Next.js landing page only. No MCP routes. |
 
-## Session selection behavior
+## Plugin connection model
 
-- **0 sessions**: Tool invocation without session ID fails: no active plugin sessions; user should open the plugin in a Figma file.
-- **1 session** (for the given userHashes): MCP uses that session automatically via registry `invoke`.
-- **Multiple sessions**: Registry returns 409 with a sessions list; MCP returns an error suggesting the user pass `sessionId` (e.g. from the plugin UI).
-- **Explicit session**: The user can pass `sessionId` in tool params (e.g. after pasting the room id from the plugin).
+WebSocket lives **only in the plugin frontend** (iframe). The backend cannot create sockets.
 
-## Components
+- **Backend** provides connection params (host = full ws URL) via `connect` when it receives `ready`.
+- **Frontend** creates the WebSocket, listens for `connect`, forwards `send` to the socket.
+- **Frontend** reports lifecycle: `wsOpened`, `wsMessage`, `wsClosed`.
+- **Disconnect**: frontend calls `ws.close()` directly. No backend round-trip.
 
-| Part | Role |
-|------|------|
-| **api** | Shared package: Zod schemas for imperative tools, derived types; generated comment-free Figma Plugin API types for agent context (`plugin-api.agent.d.ts`). |
-| **plugin** | Figma iframe + backend (main thread). Backend: WebSocket to PartyKit (websocket room), register on connect; sessionId persisted in `figma.clientStorage` per file; userHash computed from `figma.currentUser.id`. |
-| **websocket** | PartyKit party. One room per session ID. Accepts plugin WebSocket; on first message `register`, calls registry; on close, calls registry `unregister`; accepts HTTP POST from MCP (or registry) to send commands. |
-| **registry** | PartyKit party. Single room `sessions`. HTTP only. Stores userHash+fileRootId → session (one per user per file). Actions: register, unregister, resolve, invoke. Uses Storage for persistence. |
-| **mcp-server** | Next.js app with MCP route. Parses `userHashes` from URL into request context. Exposes tools with optional `sessionId`; calls bridge (direct to websocket or via registry invoke). |
+Flow: `ready` → `connect` → [frontend creates WS] → `wsOpened` → `register` → `wsMessage`/`wsClosed`.
 
-## Data flow (one tool call)
+## Session (room)
 
-1. Agent invokes tool (optional `sessionId`; URL has `userHashes`).
-2. MCP server: if `sessionId` present, POST to `parties/websocket/{sessionId}`; else POST to `parties/registry/sessions` with action `invoke` and `userHashes`.
-3. Registry (if used) resolves room and POSTs to that websocket room.
-4. PartyKit sends `{ commandId, tool, args }` to the plugin over WebSocket.
-5. Plugin runs the tool and sends `{ commandId, result }` or `{ commandId, error }`.
-6. PartyKit (and registry if used) returns the result to MCP; MCP returns to the agent.
+- One plugin instance = one session = one WebSocket connection.
+- Session ID persisted per file in `figma.clientStorage`.
+- Multi-tab protection: only one active session per user per file. Duplicate tabs show a warning.
+- MCP session registry tracks active sessions for multi-tab support.
 
-## Tool layers
+## Tool layers (api is contract)
 
-Three layers implement each tool; `api` is the single source of truth for the contract:
+Three layers implement each tool; `api` is the single source of truth:
 
 | Layer | Location | Responsibility |
 |-------|----------|----------------|
-| **Schemas (contract)** | `packages/api/tools/` | Zod schemas, `ToolsParams` types. Single source of truth. |
-| **MCP registration** | `packages/mcp-server/app/mcp/tools/` | Wraps schemas with `name`, `description`; registers with MCP server. Uses `satisfies` to stay type-safe against api. |
-| **Implementation** | `packages/plugin/backend/handlers/` | Executes tool calls via Figma Plugin API. Uses `ToolsParams` for type safety. |
+| **Schemas (contract)** | `packages/api/tools/` | Zod schemas, `ToolsParams` types. |
+| **MCP registration** | `packages/mcp/src/` | Tools, session registry, WebSocket server. |
+| **Implementation** | `packages/plugin/backend/handlers/` | Executes tool calls via Figma Plugin API. |
 
-- **Imperative**: One tool ≈ one Figma Plugin API method. Schemas and types live in the [api](packages/api.md) package. MCP and plugin both depend on api.
+- **Imperative**: One tool ≈ one Figma Plugin API method.
 - **Declarative**: Higher-level tools implemented in the plugin; may call many API methods internally.
 
-## Security
+## Data flow (one tool call)
 
-- Bridge: `BRIDGE_SECRET` in PartyKit env; MCP server and registry use it in POST body or header.
-- **userHash** is used instead of Figma user id in the config and in network requests so the raw id is not exposed.
-- Optional (future): encrypt private data (e.g. metadata in registry, or request bodies) with a key derived from `BRIDGE_SECRET`.
+1. Agent invokes MCP tool (stdio).
+2. MCP server routes to plugin via embedded WebSocket.
+3. Plugin frontend receives message, forwards to backend via `postMessage`.
+4. Backend broker dispatches to handler.
+5. Handler executes via `figma.*` API.
+6. Result flows back: handler → broker → frontend → WebSocket → MCP → agent.
+
+## Identity
+
+- **userHash**: Deterministic obfuscation of `figma.currentUser.id`. Used in MCP config instead of raw user ID.
+- **fileRootId**: UUID stored in `figma.root` pluginData (`C2F_file_UUID`). Identifies the file across sessions.
+- **No separate authentication**: MCP URL contains userHashes; plugin never sends raw Figma user ID over network.
+
+## Multi-agent coordination
+
+- **Single instance per user per file**: Detected via `figma.root.setSharedPluginData`. New instances show a warning immediately.
+- **Resource locks**: Via shared plugin data. Resource groups: `nodes`, `variables`, `styles`, `components`, `assets`.
+- **Transparent locking**: Tool handlers acquire locks, wait if blocked, execute, release. Agents never see "blocked, retry."
+
+See [2026-03-13-multi-agent-locks-single-instance](decisions/2026-03-13-multi-agent-locks-single-instance.md).
+
+## Links
+
+- Plugin flow: [packages/plugin.md](packages/plugin.md).
+- MCP server: [packages/mcp.md](packages/mcp.md) (was mcp-server).
+- Settings store refactor: [2026-03-14-settings-store-refactor](decisions/2026-03-14-settings-store-refactor.md).
+- Session/identity flow: [2026-02-23-figma-userid-session-flow](decisions/2026-02-23-figma-userid-session-flow.md).
