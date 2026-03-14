@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Bridge Architecture
 
-This project is **not** a REST backend. It is an event-driven bridge: MCP client → Next.js → PartyKit → WebSocket → Figma Plugin Frontend → Plugin Broker → Figma Plugin Backend → figma.* API.
+This project is **not** a REST backend. It is an event-driven bridge: MCP client (stdio) → packages/mcp (embedded WebSocket) → Figma Plugin Frontend → Plugin Broker → Plugin Backend → figma.* API.
 
 ## Packages and roles
 
@@ -13,35 +13,35 @@ This project is **not** a REST backend. It is an event-driven bridge: MCP client
 |---------|------|
 | **api** | Single source of truth: Zod schemas, `ToolsParams` types. No runtime logic. |
 | **plugin** | Figma iframe (frontend) + main thread (backend). Backend: broker → handlers → figma.* |
-| **mcp-server** | Next.js route `/mcp`. Parses `userHashes` from URL, forwards to PartyKit. |
-| **websocket** | PartyKit: FigmaBridge room (per session), Registry (userHash+fileKey → room). |
+| **mcp** | Stdio MCP server + embedded WebSocket. Run via `bunx bridge-mcp-figma`. Session registry for multi-tab. |
+| **site** | Next.js landing page only. No MCP routes. |
 
 ## Message passing pattern
 
 - **Plugin backend**: `backendBroker` receives messages; `handleMessage(tool, args)` dispatches to handlers. No HTTP routes.
 - **Plugin frontend**: Data from backend only via `frontendBroker` (postMessage). No direct figma.* calls.
-- **Tool flow**: MCP → POST to PartyKit → WebSocket to plugin → handler → figma.* → result back.
+- **Tool flow**: MCP (stdio) → embedded WS → plugin → handler → figma.* → result back.
 
 ## Plugin connection model
 
-WebSocket to PartyKit lives **only in the plugin frontend** (iframe). The backend cannot create sockets.
+WebSocket lives **only in the plugin frontend** (iframe). The backend cannot create sockets.
 
-- **Backend** provides connection params (host, room) via `connect` when it receives `ready`.
+- **Backend** provides connection params (host = full ws URL) via `connect` when it receives `ready`.
 - **Frontend** creates the WebSocket, listens for `connect`, forwards `send` to the socket.
 - **Frontend** reports lifecycle: `wsOpened`, `wsMessage`, `wsClosed`.
-- **Disconnect**: frontend calls `ws.close()` directly (e.g. from ws-manager). No backend round-trip.
+- **Disconnect**: frontend calls `ws.close()` directly. No backend round-trip.
 
-Flow: ready → connect → [frontend creates WS] → wsOpened → wsMessage/wsClosed.
+Flow: ready → connect → [frontend creates WS] → wsOpened → register → wsMessage/wsClosed.
 
 ## Tool layers (api is contract)
 
 1. **Schemas** in `packages/api/tools/` — Zod + `ToolsParams`. Never duplicate schemas elsewhere.
-2. **MCP registration** in `packages/mcp-server/app/mcp/tools/` — wraps with name/description.
+2. **MCP registration** in `packages/mcp/src/` — tools, session registry, ws server.
 3. **Implementation** in `packages/plugin/backend/handlers/` — executes via figma.* API.
 
 ## Rules
 
 - Do not put business logic in `main.ts` — keep it as orchestration only.
 - Do not add Zod schemas or tool types outside `packages/api` — api is the contract.
-- Do not create REST-style layers (routes, services, repositories) — this is message-passing.
-- When adding a tool: add schema in api → register in mcp-server → implement in plugin handlers.
+- Do not create REST-style layers — this is message-passing.
+- When adding a tool: add schema in api → register in mcp → implement in plugin handlers.
