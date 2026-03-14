@@ -13,6 +13,7 @@ import { RoutePersistence } from "./components/utils/route-persistence";
 import { ScreenSize } from "./components/utils/screen-size";
 import { frontendBroker } from "./lib/frontend-broker";
 import "./lib/ws-manager";
+import ClosingScreen from "./components/screens/closing";
 import DuplicatedScreen from "./components/screens/duplicated";
 import SetupScreen from "./components/screens/setup";
 import type { ROUTES } from "./routes";
@@ -49,6 +50,7 @@ function MainLayout() {
         <LoadingScreen route={route} />
         <ErrorScreen route={route} />
         <DuplicatedScreen route={route} />
+        <ClosingScreen route={route} />
         {/* Content Screens */}
         <SetupScreen route={route} />
         <SessionScreen route={route} />

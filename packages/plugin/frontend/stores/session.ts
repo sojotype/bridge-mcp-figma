@@ -12,6 +12,7 @@ interface SessionState {
   error: string | null;
   duplicateSessionServer: boolean;
   serverStatus: ServerStatus;
+  closingGraceful: { secondsRemaining: number } | null;
 }
 
 export const sessionStore = proxy<SessionState>({
@@ -22,6 +23,7 @@ export const sessionStore = proxy<SessionState>({
   error: null,
   duplicateSessionServer: false,
   serverStatus: null,
+  closingGraceful: null,
 });
 
 let isListening = false;
@@ -63,6 +65,22 @@ function ensureSessionListener() {
 
   frontendBroker.on("takeOverComplete", () => {
     sessionStore.duplicateSessionServer = false;
+  });
+
+  frontendBroker.on("closingGraceful", (data) => {
+    const { secondsRemaining } = (data ?? {}) as { secondsRemaining?: number };
+    const initialSeconds = secondsRemaining ?? 5;
+    sessionStore.closingGraceful = { secondsRemaining: initialSeconds };
+
+    const interval = setInterval(() => {
+      const current = sessionStore.closingGraceful?.secondsRemaining ?? 0;
+      if (current <= 1) {
+        clearInterval(interval);
+        sessionStore.closingGraceful = null;
+      } else {
+        sessionStore.closingGraceful = { secondsRemaining: current - 1 };
+      }
+    }, 1000);
   });
 
   frontendBroker.on("error", (data) => {

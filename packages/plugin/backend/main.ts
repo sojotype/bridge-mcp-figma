@@ -242,6 +242,14 @@ function handleWsMessage(
     figma.closePlugin();
     return undefined;
   }
+  if (msgData.type === "takenOverGraceful") {
+    const graceSeconds = (msgData.graceSeconds as number) ?? 5;
+    backendBroker.post("closingGraceful", { secondsRemaining: graceSeconds });
+    setTimeout(() => {
+      figma.closePlugin();
+    }, graceSeconds * 1000);
+    return undefined;
+  }
   if (
     msgData.type === "registered" ||
     msgData.type === "sessionsCountUpdate" ||

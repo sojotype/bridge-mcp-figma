@@ -88,5 +88,11 @@ export function RoutePersistence() {
     });
   }, [navigate]);
 
+  useEffect(() => {
+    return frontendBroker.on("closingGraceful", () => {
+      navigate(ROUTES.CLOSING);
+    });
+  }, [navigate]);
+
   return null;
 }

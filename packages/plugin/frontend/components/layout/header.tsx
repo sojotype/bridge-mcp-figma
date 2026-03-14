@@ -116,6 +116,10 @@ export default function Header({ route }: HeaderProps) {
     return null;
   }
 
+  if (route === ROUTES.CLOSING) {
+    return null;
+  }
+
   if (route === ROUTES.ERROR) {
     return <ErrorHeader />;
   }

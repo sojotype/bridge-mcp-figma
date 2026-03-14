@@ -59,7 +59,8 @@ export type BackendToFrontend =
       };
     }
   | { event: "closeSocket" }
-  | { event: "takeOverComplete" };
+  | { event: "takeOverComplete" }
+  | { event: "closingGraceful"; data: { secondsRemaining: number } };
 
 /**
  * Extracts the `data` type for a specific event from a union.

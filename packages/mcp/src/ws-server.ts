@@ -262,8 +262,18 @@ export class BridgeWsServer {
       if (result.replacedConnectionId) {
         const oldWs = this.connections.get(result.replacedConnectionId);
         if (oldWs && oldWs.readyState === 1) {
-          oldWs.send(JSON.stringify({ type: "takenOver" }));
-          oldWs.close();
+          const GRACE_SECONDS = 5;
+          oldWs.send(
+            JSON.stringify({
+              type: "takenOverGraceful",
+              graceSeconds: GRACE_SECONDS,
+            })
+          );
+          setTimeout(() => {
+            if (oldWs.readyState === 1) {
+              oldWs.close();
+            }
+          }, GRACE_SECONDS * 1000);
         }
       }
 
